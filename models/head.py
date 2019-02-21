@@ -3,19 +3,19 @@ import tensorflow as tf
 class HeadModel(tf.keras.Model):
     def __init__(
         self,
-        head_dense_size: int,
+        dense_size: int,
         dropout: float):
 
         super(HeadModel, self).__init__()
 
         self.dependent_dense = tf.keras.layers.Dense(
-            units=head_dense_size,
+            units=dense_size,
             activation=tf.keras.activations.tanh
         )
-        self.dependent_dropout = tf.keras.Dropout(dropout)
+        self.dependent_dropout = tf.keras.layers.Dropout(dropout)
 
         self.head_dense = tf.keras.layers.Dense(
-            units=head_dense_size,
+            units=dense_size,
             activation=tf.keras.activations.tanh
         )
         self.head_dropout = tf.keras.layers.Dropout(dropout)

@@ -4,16 +4,16 @@ class FeatsModel(tf.keras.Model):
     def __init__(
         self,
         feats_count: int,
-        hidden_dense_size: int,
+        dense_size: int,
         dropout: float):
 
         super(FeatsModel, self).__init__()
 
         self.dense_hidden = tf.keras.layers.Dense(
-            units=head_dense_size,
+            units=dense_size,
             activation=tf.keras.activations.tanh
         )
-        self.dropout_hidden = tf.keras.Dropout(dropout)
+        self.dropout_hidden = tf.keras.layers.Dropout(dropout)
 
         self.dense = tf.keras.layers.Dense(
             units=feats_count,

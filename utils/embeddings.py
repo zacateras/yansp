@@ -22,6 +22,8 @@ class Embeddings:
                 vocab[fields[0]] = i
                 vectors[i,:] = np.fromiter((float(x) for x in fields[1:]), dtype=np.float32)
                 i = i + 1
+                
+            vocab = Vocab.from_dict(vocab)
 
             return Embeddings(size, dim, vocab, vectors)
 
@@ -34,6 +36,8 @@ class Embeddings:
                 fields = line.split()
                 vocab[fields[0]] = i
                 i = i + 1
+
+            vocab = Vocab.from_dict(vocab)
 
             return Embeddings(size, dim, vocab, vectors)
 

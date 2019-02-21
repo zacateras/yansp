@@ -1,4 +1,5 @@
 import os
+from conll.conll18_ud_eval import ID, FORM, LEMMA, UPOS, XPOS, FEATS, HEAD, DEPREL, DEPS, MISC
 import conll.conll18_ud_eval
 import conll.vocab
 from typing import List, Mapping
@@ -10,15 +11,15 @@ class UDWord:
         self._word = word
 
         if word.is_multiword:
-            bounds = word.columns[conll.ID].split('-')
+            bounds = word.columns[ID].split('-')
             self._start, self._end = int(bounds[0], bounds[1])
         else:
-            self._start = self._end = int(word.columns[conll.ID])
+            self._start = self._end = int(word.columns[ID])
 
-        self._head = int(word.columns[conll.HEAD])
+        self._head = int(word.columns[HEAD])
 
     def __str__(self):
-        return self._word.columns[conll.FORM]
+        return self._word.columns[FORM]
 
     def __repr__(self):
         return self.__str__()
@@ -48,11 +49,27 @@ class UDWord:
 
     @property
     def form(self):
-        return self._word.columns[conll.FORM]
+        return self._word.columns[FORM]
 
     @property
     def lemma(self):
-        return self._word.columns[conll.LEMMA]
+        return self._word.columns[LEMMA]
+
+    @property
+    def upos(self):
+        return self._word.columns[UPOS]
+
+    @property
+    def feats(self):
+        return self._word.columns[FEATS]
+
+    @property
+    def head(self):
+        return self._word.columns[HEAD]
+
+    @property
+    def deprel(self):
+        return self._word.columns[DEPREL]
 
     @property
     def is_multiword(self):
@@ -71,9 +88,12 @@ class UDSentence:
     def __repr__(self):
         return self.__str__()
 
-    @property
-    def len(self) -> int:
+    def __len__(self):
         return len(self._words)
+
+    @property
+    def words(self):
+        return self._words
 
     @staticmethod  
     def from_UDRepresentation(tb):

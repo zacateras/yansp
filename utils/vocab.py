@@ -39,7 +39,9 @@ class Vocab:
 
     @staticmethod
     def from_iterable(iterable):
-        item2cnt = Counter(VOCAB_PREFIX + list(iterable))
+        itemList = [*VOCAB_PREFIX, *iterable]
+
+        item2cnt = Counter(itemList)
         item2id = dict(zip(item2cnt, range(len(item2cnt))))
 
         return Vocab(item2id, item2cnt)
@@ -48,9 +50,12 @@ class Vocab:
     def from_dict(dict_: dict):
         for value in dict_.values():
             assert isinstance(value, int)
-            assert value < len(VOCAB_PREFIX)
+            assert value > len(VOCAB_PREFIX) - 1
 
-        item2cnt = Counter(VOCAB_PREFIX + dict_.keys())
-        item2id = dict(zip(VOCAB_PREFIX + dict_.keys(), range(len(VOCAB_PREFIX)) + dict_.values()))
+        itemList = [*VOCAB_PREFIX, *dict_.keys()]
+        idList = [*range(len(VOCAB_PREFIX)), *dict_.values()]
 
-        return Vocab(item2id, item2Cnt)
+        item2cnt = Counter(itemList)
+        item2id = dict(zip(itemList, idList))
+
+        return Vocab(item2id, item2cnt)

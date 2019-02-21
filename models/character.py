@@ -4,22 +4,29 @@ class CharacterModel(tf.keras.Model):
     def __init__(
         self,
         vocab_size: int,
-        char_emb_size: int,
-        conv_lyrs: int,
+        embedding_dim: int,
+        conv_layers: int,
+        conv_size: int,
         dense_size: int):
 
         super(CharacterModel, self).__init__()
 
         self.embedding = tf.keras.layers.Embedding(
             input_dim=vocab_size,
-            output_dim=char_emb_size)
+            output_dim=embedding_dim)
 
         self.conv = [
             tf.keras.layers.Conv1D(
-                filters=char_emb_size,
-                activation=tf.nn.leaky_relu
+                filters=conv_size,
+                kernel_size=3,
+                strides=1,
+                dilation_rate=2 ^ i,
+                activation=tf.keras.activations.relu,
+                padding='same',
+                kernel_regularizer=tf.keras.regularizers.l2(0.000001),
+                bias_regularizer=tf.keras.regularizers.l2(0.000001)
             )
-            for _ in range(conv_lyrs)
+            for i in range(conv_layers)
         ]
 
         self.dense = tf.keras.layers.Dense(dense_size)
