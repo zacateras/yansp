@@ -28,7 +28,7 @@ class PosModel(tf.keras.Model):
 
     def call(self, inputs):
         x = self.dense_hidden(inputs)
-        x = self.dense_dropout(x)
+        x = self.dropout_hidden(x)
 
         x = self.dense(x)
         x = self.dropout(x)

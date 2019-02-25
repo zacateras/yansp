@@ -20,7 +20,7 @@ class CharacterModel(tf.keras.Model):
                 filters=conv_size,
                 kernel_size=3,
                 strides=1,
-                dilation_rate=2 ^ i,
+                dilation_rate=2 ** i,
                 activation=tf.keras.activations.relu,
                 padding='same',
                 kernel_regularizer=tf.keras.regularizers.l2(0.000001),
@@ -28,6 +28,8 @@ class CharacterModel(tf.keras.Model):
             )
             for i in range(conv_layers)
         ]
+
+        self.global_max_pooling = tf.keras.layers.GlobalMaxPooling1D()
 
         self.dense = tf.keras.layers.Dense(dense_size)
 
@@ -37,4 +39,6 @@ class CharacterModel(tf.keras.Model):
         for conv in self.conv:
             x = conv(x)
 
-        return self.dense(x)
+        x = self.global_max_pooling(x)
+
+        return x

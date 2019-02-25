@@ -2,27 +2,96 @@ import os
 from conll.conll18_ud_eval import ID, FORM, LEMMA, UPOS, XPOS, FEATS, HEAD, DEPREL, DEPS, MISC
 import conll.conll18_ud_eval
 import conll.vocab
+import utils
 from typing import List, Mapping
 from enum import Enum
 
-
 class UDWord:
+    def __str__(self):
+        return self.form
+
+    def __repr__(self):
+        return self.__str__()
+
+    @property
+    def id(self):
+        raise NotImplementedError
+
+    @property
+    def head(self):
+        raise NotImplementedError
+
+    @property
+    def form(self):
+        raise NotImplementedError
+
+    @property
+    def lemma(self):
+        raise NotImplementedError
+
+    @property
+    def upos(self):
+        raise NotImplementedError
+
+    @property
+    def feats(self):
+        raise NotImplementedError
+
+    @property
+    def deprel(self):
+        raise NotImplementedError
+
+    @property
+    def is_multiword(self):
+        raise NotImplementedError
+
+class UDRoot(UDWord):
+    @property
+    def id(self):
+        return utils.vocab.ROOT
+
+    @property
+    def head(self):
+        # CoNLL file words point to ROOT at 0 position
+        return 0
+
+    @property
+    def form(self):
+        return utils.vocab.ROOT
+
+    @property
+    def lemma(self):
+        return utils.vocab.ROOT
+
+    @property
+    def upos(self):
+        return utils.vocab.ROOT
+
+    @property
+    def feats(self):
+        return utils.vocab.ROOT
+
+    @property
+    def deprel(self):
+        return utils.vocab.ROOT
+
+    @property
+    def is_multiword(self):
+        return False
+
+
+class CoNLLWord(UDWord):
     def __init__(self, word):
         self._word = word
 
         if word.is_multiword:
             bounds = word.columns[ID].split('-')
-            self._start, self._end = int(bounds[0], bounds[1])
+            self._start = int(bounds[0])
+            self._end = int(bounds[1])
         else:
             self._start = self._end = int(word.columns[ID])
 
         self._head = int(word.columns[HEAD])
-
-    def __str__(self):
-        return self._word.columns[FORM]
-
-    def __repr__(self):
-        return self.__str__()
 
     @property
     def columns(self):
@@ -61,11 +130,7 @@ class UDWord:
 
     @property
     def feats(self):
-        return self._word.columns[FEATS]
-
-    @property
-    def head(self):
-        return self._word.columns[HEAD]
+        return self._word.columns[FEATS].split('|')
 
     @property
     def deprel(self):
@@ -98,14 +163,15 @@ class UDSentence:
     @staticmethod  
     def from_UDRepresentation(tb):
         last: int = 0
-        words: List[UDWord] = []
+        root = UDRoot()
+        words: List[UDWord] = [root]
 
         for word in tb.words:
-            word = UDWord(word)
+            word = CoNLLWord(word)
 
             if word.id < last:
                 yield UDSentence(words)
-                words = []
+                words = [root]
             
             last = word.id
             words.append(word)

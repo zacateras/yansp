@@ -41,8 +41,8 @@ class DeprelModel(tf.keras.Model):
         head = self.head_dropout(head)
         head = self.permute(head)
         
-        x = self.dot(inputs_head, head)
-        x = self.concat(x, dependent)
+        x = self.dot([inputs_head, head])
+        x = self.concat([x, dependent])
         x = self.dropout(x)
         x = self.softmax(x)
 

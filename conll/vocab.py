@@ -3,6 +3,7 @@ from enum import Enum
 from utils.vocab import Vocab
 
 CHAR = 101
+WORD = 102
 FORM = conll.FORM
 LEMMA = conll.LEMMA
 UPOS = conll.UPOS
