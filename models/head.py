@@ -1,6 +1,6 @@
-import tensorflow as tf
+import keras
 
-class HeadModel(tf.keras.Model):
+class HeadModel(keras.Model):
     def __init__(
         self,
         dense_size: int,
@@ -8,21 +8,21 @@ class HeadModel(tf.keras.Model):
 
         super(HeadModel, self).__init__()
 
-        self.dependent_dense = tf.keras.layers.Dense(
+        self.dependent_dense = keras.layers.Dense(
             units=dense_size,
-            activation=tf.keras.activations.tanh
+            activation=keras.activations.tanh
         )
-        self.dependent_dropout = tf.keras.layers.Dropout(dropout)
+        self.dependent_dropout = keras.layers.Dropout(dropout)
 
-        self.head_dense = tf.keras.layers.Dense(
+        self.head_dense = keras.layers.Dense(
             units=dense_size,
-            activation=tf.keras.activations.tanh
+            activation=keras.activations.tanh
         )
-        self.head_dropout = tf.keras.layers.Dropout(dropout)
+        self.head_dropout = keras.layers.Dropout(dropout)
 
-        self.dot = tf.keras.layers.Dot(axes=2)
-        self.softmax = tf.keras.layers.Activation(
-            activation=tf.keras.activations.softmax,
+        self.dot = keras.layers.Dot(axes=2)
+        self.softmax = keras.layers.Activation(
+            activation=keras.activations.softmax,
             name='head',
         )
 

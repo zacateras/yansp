@@ -1,10 +1,10 @@
-import tensorflow as tf
+import keras
 import conll
 import models
 from utils import Embeddings, Vocab
 from typing import List
 
-class ParserModel(tf.keras.Model):
+class ParserModel(keras.Model):
     def __init__(
         self,
         args,
@@ -17,7 +17,6 @@ class ParserModel(tf.keras.Model):
         deprel_vocab = vocabs[conll.vocab.DEPREL]
         upos_vocab = vocabs[conll.vocab.UPOS]
         feats_vocab = vocabs[conll.vocab.FEATS]
-        lemma_vocab = vocabs[conll.vocab.LEMMA]
 
         #
         # inputs
@@ -27,8 +26,8 @@ class ParserModel(tf.keras.Model):
             dropout=args.model_dropout
         )
 
-        self.char_masking = tf.keras.layers.Masking(mask_value=0)
-        self.char_model = tf.keras.layers.TimeDistributed(
+        self.char_masking = keras.layers.Masking(mask_value=0)
+        self.char_model = keras.layers.TimeDistributed(
             models.CharacterModel(
                 vocab_size=char_vocab.size,
                 embedding_dim=args.model_char_embedding_dim,
@@ -38,7 +37,7 @@ class ParserModel(tf.keras.Model):
             )
         )
 
-        self.concat = tf.keras.layers.Concatenate(axis=-1)
+        self.concat = keras.layers.Concatenate(axis=-1)
 
         #
         # core
@@ -76,27 +75,29 @@ class ParserModel(tf.keras.Model):
         )
 
         self.lemma_model = models.LemmaModel(
-                word_max_length=args.model_word_max_length,
-                char_vocab_size=char_vocab.size,
-                char_embedding_dim=args.model_char_embedding_dim,
-                lemma_vocab_size=lemma_vocab.size,
-                conv_layers=args.model_char_conv_layers,
-                conv_size=args.model_char_conv_size,
-                dense_size=args.model_lemma_dense_size,
-                dropout=args.model_dropout
-            )
+            word_max_length=args.model_word_max_length,
+            char_vocab_size=char_vocab.size,
+            char_embedding_dim=args.model_char_embedding_dim,
+            conv_layers=args.model_char_conv_layers,
+            conv_size=args.model_char_conv_size,
+            dense_size=args.model_lemma_dense_size,
+            dropout=args.model_dropout
+        )
 
-    def call(self, inputs_word, inputs_char):
+    def call(self, inputs):
 
-        word = self.word_model(inputs_word)
-        char = self.char_masking(inputs_char)
+        word_inp = inputs[0]
+        word = self.word_model(word_inp)
+
+        char_inp = inputs[1]
+        char = self.char_masking(char_inp)
         char = self.char_model(char)
 
         x = self.concat([word, char])
 
         x = self.core_model(x)
 
-        lemma = self.lemma_model(x, inputs_char)
+        lemma = self.lemma_model(x, char_inp)
         upos = self.upos_model(x)
         feats = self.feats_model(x)
         head = self.head_model(x)

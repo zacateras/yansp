@@ -1,6 +1,6 @@
-import tensorflow as tf
+import keras
 
-class PosModel(tf.keras.Model):
+class PosModel(keras.Model):
     def __init__(
         self,
         pos_count: int,
@@ -9,20 +9,20 @@ class PosModel(tf.keras.Model):
 
         super(PosModel, self).__init__()
 
-        self.dense_hidden = tf.keras.layers.Dense(
+        self.dense_hidden = keras.layers.Dense(
             units=dense_size,
-            activation=tf.keras.activations.tanh
+            activation=keras.activations.tanh
         )
-        self.dropout_hidden = tf.keras.layers.Dropout(dropout)
+        self.dropout_hidden = keras.layers.Dropout(dropout)
 
-        self.dense = tf.keras.layers.Dense(
+        self.dense = keras.layers.Dense(
             units=pos_count,
-            activation=tf.keras.activations.tanh
+            activation=keras.activations.tanh
         )
-        self.dropout = tf.keras.layers.Dropout(dropout)
+        self.dropout = keras.layers.Dropout(dropout)
 
-        self.softmax = tf.keras.layers.Activation(
-            activation=tf.keras.activations.softmax,
+        self.softmax = keras.layers.Activation(
+            activation=keras.activations.softmax,
             name='pos',
         )
 

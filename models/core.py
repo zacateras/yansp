@@ -1,6 +1,6 @@
-import tensorflow as tf
+import keras
 
-class CoreModel(tf.keras.Model):
+class CoreModel(keras.Model):
     def __init__(
         self,
         lstm_layers: int,
@@ -12,16 +12,16 @@ class CoreModel(tf.keras.Model):
         super(CoreModel, self).__init__()
 
         self.biLSTM = [
-            tf.keras.layers.Bidirectional(
-                tf.keras.layers.LSTM(
+            keras.layers.Bidirectional(
+                keras.layers.LSTM(
                     units=lstm_units,
                     dropout=lstm_dropout,
                     recurrent_dropout=lstm_dropout,
                     return_sequences=True,
-                    kernel_regularizer=tf.keras.regularizers.l2(0.000001),
-                    bias_regularizer=tf.keras.regularizers.l2(0.000001),
-                    recurrent_regularizer=tf.keras.regularizers.l2(0.000001),
-                    activity_regularizer=tf.keras.regularizers.l2(0.000001)
+                    kernel_regularizer=keras.regularizers.l2(0.000001),
+                    bias_regularizer=keras.regularizers.l2(0.000001),
+                    recurrent_regularizer=keras.regularizers.l2(0.000001),
+                    activity_regularizer=keras.regularizers.l2(0.000001)
                 )
             ) \
             for x in range(lstm_layers)
@@ -30,12 +30,12 @@ class CoreModel(tf.keras.Model):
         # last layers are taken first
 
         self.dropout = [
-            tf.keras.layers.GaussianDropout(dropout) \
+            keras.layers.GaussianDropout(dropout) \
             for x in range(lstm_layers + 1) 
         ]
 
         self.noise = [
-            tf.keras.layers.GaussianNoise(noise) \
+            keras.layers.GaussianNoise(noise) \
             for x in range(lstm_layers + 1) 
         ]
 

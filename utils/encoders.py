@@ -1,26 +1,46 @@
 import utils
 import numpy as np
-import tensorflow as tf
+import keras
 
 class BasePropEncoder:
-    def __init__(self, property_selector):
+    def __init__(self, property_selector, padded=True, onehot=False):
         self.property_selector = property_selector
+        self.padded = padded
+        self.onehot = onehot
+        self.dtype = np.float32
 
-    def encode(self, source, is_batch):
-        return self._encode_batch(source) if is_batch else self._encode_single(source)
+    def encode(self, sent):
+        enc = self._encode(sent)
+        if self.padded:
+            enc = self._to_padded(enc)
+        if self.onehot:
+            enc = self._to_onehot(enc)
+        return enc
 
-    def _encode_batch(self, source):
-        raise NotImplementedError
+    def encode_batch(self, source):
+        enc = [
+            self._encode(sent) \
+            for sent in source
+        ]
+        if self.padded:
+            enc = self._to_padded(enc)
+        if self.onehot:
+            enc = self._to_onehot(enc)
+        return enc
     
-    def _encode_single(self, source):
+    def _encode(self, sent):
         raise NotImplementedError
 
-    def encode_onehot(self, source, is_batch):
+    def _to_padded(self, source):
+        return keras.preprocessing.sequence.pad_sequences(
+            source, dtype=self.dtype, padding='post', truncating='post', value=utils.vocab.PAD_ID)
+
+    def _to_onehot(self, source):
         raise NotImplementedError
 
 class BasePropVocabEncoder(BasePropEncoder):
-    def __init__(self, property_selector, vocab: utils.Vocab):
-        super(BasePropVocabEncoder, self).__init__(property_selector)
+    def __init__(self, property_selector, vocab: utils.Vocab, padded=True, onehot=False):
+        super(BasePropVocabEncoder, self).__init__(property_selector, padded, onehot)
 
         self.vocab = vocab
 
@@ -35,55 +55,31 @@ class BasePropVocabEncoder(BasePropEncoder):
         else:
             self.dtype = np.uint64
 
-    def encode_onehot(self, source, is_batch):
-        return tf.keras.utils.to_categorical(
-            y=self.encode(source, is_batch),
-            num_classes=self.vocab.size,
-            dtype=self.dtype
-        )
+    def _to_onehot(self, source):
+        return keras.utils.to_categorical(
+            y=source, num_classes=self.vocab.size, dtype=self.dtype)
 
 class PropVocabEncoder(BasePropVocabEncoder):
-    def __init__(self, property_selector, vocab: utils.Vocab):
-        super(PropVocabEncoder, self).__init__(property_selector, vocab)
+    def __init__(self, property_selector, vocab: utils.Vocab, padded=True, onehot=False):
+        super(PropVocabEncoder, self).__init__(property_selector, vocab, padded, onehot)
     
-    def _encode_single(self, source):
-        return np.fromiter((
+    def _encode(self, sent):
+        return [
             self.vocab.item2id(self.property_selector(word)) \
-            for word in source.words
-        ), dtype=self.dtype)
-
-    def _encode_batch(self, source):
-        return tf.keras.preprocessing.sequence.pad_sequences([
-            [
-                self.vocab.item2id(self.property_selector(word)) \
-                for word in sent.words
-            ] \
-            for sent in source
-        ], dtype=self.dtype, padding='post', truncating='post', value=utils.vocab.PAD_ID)
+            for word in sent.words
+        ]
 
 class PropIterVocabEncoder(BasePropVocabEncoder):
-    def __init__(self, property_selector, vocab: utils.Vocab, max_length: int):
-        super(PropIterVocabEncoder, self).__init__(property_selector, vocab)
+    def __init__(self, property_selector, vocab: utils.Vocab, max_length: int, padded=True, onehot=False):
+        super(PropIterVocabEncoder, self).__init__(property_selector, vocab, padded, onehot)
 
         self.max_length = max_length
 
-    def _encode_single(self, source):
-        return tf.keras.preprocessing.sequence.pad_sequences([
-            [
-                self.vocab.item2id(char) \
-                for char in self.property_selector(word)
-            ] \
-            for word in source.words
-        ], maxlen=self.max_length, dtype=self.dtype, padding='post', truncating='post', value=utils.vocab.PAD_ID)
-
-    def _encode_batch(self, source):
-        return tf.keras.preprocessing.sequence.pad_sequences([
-            [
-                self._encode_word(word) \
-                for word in sent.words
-            ] \
-            for sent in source
-        ], dtype=self.dtype, padding='post', truncating='post', value=utils.vocab.PAD_ID)
+    def _encode(self, sent):
+        return [
+            self._encode_word(word) \
+            for word in sent.words
+        ]
 
     def _encode_word(self, word):
         p = self.property_selector(word)
@@ -99,28 +95,45 @@ class PropIterVocabEncoder(BasePropVocabEncoder):
         return enc
 
 class HeadPropEncoder(BasePropEncoder):
-    def __init__(self):
-        super(HeadPropEncoder, self).__init__(lambda x: x.head)
+    def __init__(self, padded=True, onehot=False):
+        super(HeadPropEncoder, self).__init__(lambda x: x.head, padded, onehot)
 
         self.dtype = np.uint8
 
-    def _encode_single(self, source):
-        return np.fromiter((
+    def _encode(self, sent):
+        return [
             int(self.property_selector(word)) \
-            for word in source.words
-        ), dtype=self.dtype)
+            for word in sent.words
+        ]
 
-    def _encode_batch(self, source):
-        return tf.keras.preprocessing.sequence.pad_sequences([
-            [
-                int(self.property_selector(word)) \
-                for word in sent.words
-            ] \
-            for sent in source
-        ], dtype=self.dtype, padding='post', truncating='post', value=utils.vocab.PAD_ID)
+    def _to_onehot(self, source):
+        if hasattr(source, '__iter__') and hasattr(source[0], 'shape'):
+            num_classes = source[0].shape[0]
+        elif hasattr(source, 'shape'):
+            num_classes = source.shape[0]
+        else:
+            num_classes = len(source)
 
-    def encode_onehot(self, source, is_batch):
-        y = self.encode(source, is_batch)
-        num_classes = y[0].shape[0] if is_batch else len(source)
+        return keras.utils.to_categorical(source, num_classes, dtype=self.dtype)
 
-        return tf.keras.utils.to_categorical(y, num_classes, dtype=self.dtype)
+class FeatsPropEncoder(BasePropEncoder):
+    def __init__(self, vocab: utils.Vocab, padded=True):
+        super(FeatsPropEncoder, self).__init__(lambda x: x.feats, padded, onehot=False)
+
+        self.vocab = vocab
+        self.dtype = np.uint8
+
+    def _encode(self, sent):
+        return [
+            self._encode_word(word) \
+            for word in sent.words
+        ]
+
+    def _encode_word(self, word):
+        p = self.property_selector(word)
+        enc = np.zeros((self.vocab.size), dtype=self.dtype)
+
+        for feat in p:
+            enc[self.vocab.item2id(feat)] = 1
+
+        return enc

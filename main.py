@@ -7,8 +7,10 @@ import models
 import numpy as np
 
 from parser.features import *
+from parser.losses import *
 
 import tensorflow as tf
+import keras
 
 def parse_args():
     parser = argparse.ArgumentParser()
@@ -21,6 +23,8 @@ def parse_args():
     parser.add_argument('--mode', default='train', choices=['train', 'predict'])
     parser.add_argument('--lang', type=str, help='Language')
 
+    parser.add_argument('--batch_size', type=int, default=1000, help='Size of batches (in words).')
+
     parser.add_argument('--model_word_dense_size', type=int, default=100, help='Size of word model output dense layer.')
     parser.add_argument('--model_word_max_length', type=int, default=30, help='Maximum length of words.')
     parser.add_argument('--model_char_embedding_dim', type=int, default=100, help='Dimension of character level embeddings.')
@@ -28,64 +32,68 @@ def parse_args():
     parser.add_argument('--model_char_conv_size', type=int, default=30, help='Size of character model convolution layers.')
     parser.add_argument('--model_char_dense_size', type=int, default=100, help='Size of character model output dense layer.')
     parser.add_argument('--model_lstm_layers', type=int, default=2, help='Numer of LSTM layers in core model.')
-    parser.add_argument('--model_lstm_units', type=int, default=512, help='Numer of output units for LSTM layers in core model.')
+    parser.add_argument('--model_lstm_units', type=int, default=256, help='Numer of output units for LSTM layers in core model.')
     parser.add_argument('--model_lstm_dropout', type=int, default=2, help='Dropout rate applied to LSTM layers in core model.')
     parser.add_argument('--model_head_dense_size', type=int, default=100, help='Size of head model hidden dense size.')
     parser.add_argument('--model_deprel_dense_size', type=int, default=100, help='Size of deprel model hidden dense size.')
     parser.add_argument('--model_upos_dense_size', type=int, default=100, help='Size of UPOS model hidden dense size.')
     parser.add_argument('--model_feats_max_length', type=int, default=10, help='Maximum length of features.')
     parser.add_argument('--model_feats_dense_size', type=int, default=100, help='Size of feats model hidden dense size.')
-    parser.add_argument('--model_lemma_dense_size', type=int, default=100, help='Size of lemma model hidden dense size.')
+    parser.add_argument('--model_lemma_dense_size', type=int, default=25, help='Size of lemma model hidden dense size.')
     parser.add_argument('--model_dropout', type=float, default=0.25, help='Dropout rate applied on default to dropout layers.')
     parser.add_argument('--model_noise', type=float, default=0.2, help='Noise StdDev applied on default to noise layers.')
+
+    parser.add_argument('--model_loss_cycle_weight', type=float, default=1.0, help='Relative weight of cycle loss.')
+    parser.add_argument('--model_loss_cycle_n', type=int, default=3, help='Number of cycles to find.')
 
     args = parser.parse_args()
     return args
 
-# def cycle_loss(self, y_true, y_pred):
-#     loss = 0.0
-#     if self.params.cycle_loss_n == 0:
-#         return loss
+def batches_by_words(sents, batch_size_max):
+    batch_size = 0
+    batch_buffer = []
+    for sent in sents:
+        batch_buffer.append(sent)
+        batch_size += len(sent)
 
-#     yn = y_pred[:, 1:, 1:]
-#     for i in range(self.params.cycle_loss_n):
-#         loss += K.sum(tf.trace(yn))/self.params.batch_size
-#         yn = K.batch_dot(yn, y_pred[:, 1:, 1:])
+        if batch_size >= batch_size_max:
+            yield batch_buffer
+            batch_buffer = []
+            batch_size = 0
 
-#     return loss
+    if batch_size > 0:
+        yield batch_buffer
 
-# def head_loss(self, y_true, y_pred):
-#     loss = 0.0
-#     loss += categorical_crossentropy(y_true, y_pred)
-#     loss += self.params.cycle_loss_weight*self.cycle_loss(y_true, y_pred)
-
-#     return loss
-
-# def lemma_loss(self, y_true, y_pred):
-#     y_pred = K.clip(y_pred, K.epsilon(), 1 - K.epsilon())
-#     return -K.mean(K.sum(y_true * K.log(y_pred) + (1 - y_true) * K.log(1 - y_pred), axis=-1)) 
-
-# def feats_loss(self, y_true, y_pred):
-#     loss = 0.0
-#     slices = self.targets_factory.encoders['feats'].slices
-#     for cat, (min_idx, max_idx) in slices.items():
-#         y_pred_cat = Activation('softmax')(y_pred[:, :, min_idx:max_idx])
-#         y_true_cat = y_true[:, :, min_idx:max_idx]
-#         loss += categorical_crossentropy(y_true_cat, y_pred_cat)
-
-#     return loss
+def generator_from(mapping):
+    for item in mapping:
+        yield (item[0], item[1])
 
 def main():
+    tf.enable_eager_execution()
+
     args = parse_args()
     conllu_train = conll.load_conllu(args.train_file)
     embeddings = utils.Embeddings.from_file(args.wordvec_file)
 
+    x_feats = [F_FORM, F_FORM_CHAR]
+    y_feats = [F_LEMMA_CHAR, F_UPOS, F_FEATS, F_HEAD, F_DEPREL]
+    y_losses = [
+        CategoricalCrossentropyLoss(),
+        CategoricalCrossentropyLoss(),
+        FeatsLoss(),
+        HeadLoss(args.model_loss_cycle_weight, args.model_loss_cycle_n, args.batch_size),
+        CategoricalCrossentropyLoss(),
+    ]
+    y_losses_weights = [0.2, 0.8, 0.05, 0.05, 0.2]
+
+    sents = conllu_train.sents
     vocabs = conllu_train.vocabs
     vocabs[conll.vocab.WORD] = embeddings.vocab
+    encoder = FeaturesEncoder(vocabs, args, x_feats=x_feats, y_feats=y_feats)
 
-    encoder = FeaturesEncoder(vocabs, args)
-    batch_sents = [next(conllu_train.sents) for _ in range(32)]
-    batch = encoder.encode_batch(batch_sents)
+    sents_by_length = sorted(sents, key=lambda sent: len(sent))
+    batches = batches_by_words(sents_by_length, args.batch_size)
+    generator = generator_from(map(encoder.encode_batch, batches))
 
     parser = models.ParserModel(
         args,
@@ -93,14 +101,32 @@ def main():
         vocabs=conllu_train.vocabs
     )
 
-    parser.compile(
-        optimizer=tf.keras.optimizers.Adam(lr=0.001, clipvalue=5.0, beta_1=0.9, beta_2=0.9, decay=1e-4)
-    )
+    optimizer = tf.train.AdamOptimizer(learning_rate=0.001, beta1=0.9, beta2=0.9, epsilon=1e-4)
 
-    output = parser(batch[F_FORM], batch[F_FORM_CHAR])
+    loss_history = []
+    for (batch, (x, y_true)) in enumerate(generator):
+        loss_feats = dict()
 
-    pass
+        if batch % 10 == 0:
+            print(loss_feats)
+        with tf.GradientTape() as tape:
+            y_pred = parser(x)
+            
+            loss_total = 0.0
+            for (feat, yt, yp, l, weight) in zip(y_feats, y_true, y_pred, y_losses, y_losses_weights):
+                loss = l(yt, yp)
+                loss_feats[feat] = loss.numpy()
+                loss_total += weight * loss
+
+        loss_feats['TOTAL'] = loss_total.numpy()
+        
+        loss_history.append(loss_feats)
+
+        grads = tape.gradient(loss_total, parser.trainable_variables)
+        optimizer.apply_gradients(
+            zip(grads, parser.trainable_variables), 
+            global_step=tf.train.get_or_create_global_step())
+
 
 if __name__ == '__main__':
-    tf.enable_eager_execution()
     main()

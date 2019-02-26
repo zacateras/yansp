@@ -1,7 +1,7 @@
-import tensorflow as tf
+import keras
 from utils.embeddings import Embeddings
 
-class WordModel(tf.keras.Model):
+class WordModel(keras.Model):
     def __init__(
         self,
         embeddings: Embeddings,
@@ -10,7 +10,7 @@ class WordModel(tf.keras.Model):
 
         super(WordModel, self).__init__()
 
-        self.embedding = tf.keras.layers.Embedding(
+        self.embedding = keras.layers.Embedding(
             input_dim=embeddings.size,
             output_dim=embeddings.dim,
             mask_zero=True,
@@ -18,12 +18,12 @@ class WordModel(tf.keras.Model):
             trainable=False
         )
 
-        self.dense = tf.keras.layers.Dense(
+        self.dense = keras.layers.Dense(
             units=dense_size,
-            activation=tf.keras.activations.tanh
+            activation=keras.activations.tanh
         )
 
-        self.dropout = tf.keras.layers.Dropout(dropout)
+        self.dropout = keras.layers.Dropout(dropout)
 
     def call(self, inputs):
         x = self.embedding(inputs)

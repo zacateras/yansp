@@ -1,6 +1,6 @@
-import tensorflow as tf
+import keras
 
-class FeatsModel(tf.keras.Model):
+class FeatsModel(keras.Model):
     def __init__(
         self,
         feats_count: int,
@@ -9,17 +9,17 @@ class FeatsModel(tf.keras.Model):
 
         super(FeatsModel, self).__init__()
 
-        self.dense_hidden = tf.keras.layers.Dense(
+        self.dense_hidden = keras.layers.Dense(
             units=dense_size,
-            activation=tf.keras.activations.tanh
+            activation=keras.activations.tanh
         )
-        self.dropout_hidden = tf.keras.layers.Dropout(dropout)
+        self.dropout_hidden = keras.layers.Dropout(dropout)
 
-        self.dense = tf.keras.layers.Dense(
+        self.dense = keras.layers.Dense(
             units=feats_count,
-            activation=tf.keras.activations.tanh
+            activation=keras.activations.tanh
         )
-        self.dropout = tf.keras.layers.Dropout(dropout, name='feats')
+        self.dropout = keras.layers.Dropout(dropout)
 
     def call(self, inputs):
         x = self.dense_hidden(inputs)
