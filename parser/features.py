@@ -1,4 +1,6 @@
 from utils.encoders import PropVocabEncoder, PropIterVocabEncoder, HeadPropEncoder, FeatsPropEncoder
+
+import conll
 import conll.vocab
 
 F_FORM = "FORM"
@@ -52,9 +54,34 @@ class FeaturesEncoder:
             y = dict((f, encoder.encode_batch(sents)) for (f, encoder) in self.y_encoders)
         )
     
-    def decode_batch(self, batch: Batch):
-        return Batch(
-            sents = batch.sents,
-            x = None,
-            y = dict((f, encoder.decode_batch(batch.y[f])) for (f, encoder) in self.y_encoders)
-        )
+    def decode_batch(self, batch: Batch, y=None):
+        if y is None:
+            y = batch.y
+
+        y = dict((f, encoder.decode_batch(y[f])) for (f, encoder) in self.y_encoders)
+
+        sents = []
+
+        for sent_i in range(len(batch.sents)):
+            sent = batch.sents[sent_i]
+
+            words = list()
+            for word_i in range(len(sent)):
+                columns = [
+                    str(sent[word_i].id),                 # 1 id
+                    sent[word_i].form,                    # 2 form
+                    y[F_LEMMA_CHAR][sent_i][word_i],      # 3 lemma
+                    y[F_UPOS][sent_i][word_i],            # 4 upos
+                    '_',                                  # 5 xpos
+                    '|'.join(y[F_FEATS][sent_i][word_i]), # 6 feats
+                    str(y[F_HEAD][sent_i][word_i]),       # 7 head
+                    y[F_DEPREL][sent_i][word_i],          # 8 deprel
+                    '_',                                  # 9 deps
+                    '_'                                   # 10 misc
+                ]
+
+                words.append(conll.UDWord(columns))
+
+            sents.append(conll.UDSentence(words))
+
+        return sents

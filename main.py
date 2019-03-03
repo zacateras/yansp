@@ -1,6 +1,5 @@
 import argparse
 import time
-import os
 
 import conll
 import utils
@@ -8,12 +7,11 @@ import models
 
 import numpy as np
 
+import parser
 from parser.features import *
-from parser.losses import *
 from parser.generators import *
 
 import tensorflow as tf
-import keras
 
 def parse_args():
     parser = argparse.ArgumentParser()
@@ -27,16 +25,15 @@ def parse_args():
     parser.add_argument('--lang', type=str, help='Language')
 
     parser.add_argument('--epochs', type=int, default=20, help='Numer of epochs.')
+    parser.add_argument('--epochs_early_stopping', type=int, default=5, help='Number of epochs w/o loss decrease required for early stopping.')
     parser.add_argument('--batch_per_epoch', type=int, default=50, help='Number of batches per epoch.')
+    parser.add_argument('--batch_per_summary', type=int, default=1, help='Summary logs reporting interval.')
     parser.add_argument('--batch_size', type=int, default=1000, help='Size of batches (in words).')
     parser.add_argument('--batch_lenwise', type=bool, default=False, help='If true, sentences will be sorted and processed in length order')
-
-    parser.add_argument('--checkpoint_global_step', type=int, default=10, help='Checkpointing interval.')
 
     parser.add_argument('--loss_cycle_weight', type=float, default=1.0, help='Relative weight of cycle loss.')
     parser.add_argument('--loss_cycle_n', type=int, default=3, help='Number of cycles to find.')
     parser.add_argument('--loss_weights', default=[0.2, 0.8, 0.05, 0.05, 0.2], help='Losses weights.')
-    parser.add_argument('--loss_summary_global_step', type=int, default=1, help='Summary logs reporting interval.')
 
     parser.add_argument('--model_word_dense_size', type=int, default=100, help='Size of word model output dense layer.')
     parser.add_argument('--model_word_max_length', type=int, default=30, help='Maximum length of words.')
@@ -62,6 +59,29 @@ def parse_args():
 def log(message):
     print('{} {}'.format(time.strftime("%Y-%m-%d %H:%M:%S"), message))
 
+class Step:
+    def __init__(self, model, losses, weights):
+        self._model = model
+        self._losses = losses
+        self._weights = weights
+
+    def on(self, batch):
+        summaries = dict()
+
+        y_pred = self._model(batch.x)
+        y_true = batch.y
+        
+        loss_total = 0.0
+        for (feat, yt, yp, l, weight) in zip(F_Y, y_true.values(), y_pred.values(), self._losses.values(), self._weights):
+            loss = l(yt, yp)
+            loss_total += weight * loss
+
+            summaries['{}_LOSS'.format(feat)] = loss.numpy()
+
+        summaries['TOTAL_LOSS'] = loss_total.numpy()
+
+        return loss_total, summaries, y_pred
+
 def main():
     tf.enable_eager_execution()
 
@@ -83,14 +103,6 @@ def main():
 
     vocabs = conllu_train.vocabs
     vocabs[conll.vocab.WORD] = embeddings.vocab
-
-    y_losses = [
-        CategoricalCrossentropyLoss(),
-        CategoricalCrossentropyLoss(),
-        FeatsLoss(),
-        HeadLoss(args.loss_cycle_weight, args.loss_cycle_n, args.batch_size),
-        CategoricalCrossentropyLoss(),
-    ]
 
     log('Creating encoder...')
     encoder = FeaturesEncoder(vocabs, args)
@@ -119,98 +131,69 @@ def main():
     logger = tf.contrib.summary.create_file_writer(args.save_dir + '/logs/')
     logger.set_as_default()
 
-    log('Starting training ({} epochs, {} batches/epoch)...'.format(args.epochs, args.batch_per_epoch))
-    for epoch_i in range(args.epochs):
+    epoch_start = tf.train.get_or_create_global_step() / args.batch_per_epoch
+    epochs_early_stopping_counter = 0
+
+    log('Starting training ({} -> {} epochs, {} batches/epoch)...'.format(epoch_start, args.epochs, args.batch_per_epoch))
+    step = Step(model, parser.losses.y(args), args.loss_weights)
+    for epoch_i in range(epoch_start, args.epochs):
 
         log('Epoch {}/{}.'.format(epoch_i + 1, args.epochs))
 
         for (batch_i, batch) in ((i, next(generator_train)) for i in range(args.batch_per_epoch)):
-            loss_summaries = dict()
-            
-            with tf.GradientTape() as tape:
-                y_pred = model(batch.x)
-                y_true = batch.y
-                
-                loss_total = 0.0
-                for (feat, yt, yp, l, weight) in zip(F_Y, y_true.values(), y_pred.values(), y_losses, args.loss_weights):
-                    loss = l(yt, yp)
-                    loss_summaries[feat] = loss.numpy()
-                    loss_total += weight * loss
+            global_step = tf.train.get_or_create_global_step()
 
-            loss_summaries['TOTAL'] = loss_total.numpy()
+            with tf.GradientTape() as tape:
+                loss_total, summaries, _ = step.on(batch)
 
             grads = tape.gradient(loss_total, model.trainable_variables)
-            optimizer.apply_gradients(
-                zip(grads, model.trainable_variables), 
-                global_step=tf.train.get_or_create_global_step())
-
-            # save checkpoint
-            if batch_i % args.checkpoint_global_step == 0:
-                log('Saving checkpoint...')
-                checkpoint.save(checkpoint_path + 'model')
+            optimizer.apply_gradients(zip(grads, model.trainable_variables), global_step=global_step)
 
             # log to console
-            if batch_i % args.loss_summary_global_step == 0:
-                log(loss_summaries)
+            if batch_i % args.batch_per_summary == 0:
+                log(summaries)
 
             # log to file
-            with tf.contrib.summary.record_summaries_every_n_global_steps(args.loss_summary_global_step):
-                for feat, loss in loss_summaries.items():
-                    tf.contrib.summary.scalar(feat, loss)
+            with tf.contrib.summary.record_summaries_every_n_global_steps(args.batch_per_summary):
+                for code, value in summaries.items():
+                    tf.contrib.summary.scalar('{}_TRAIN'.format(code), value)
+
+            # initialize with first step - new or checkpointed model
+            if 'loss_total_min' not in locals():       
+                loss_total_min = loss_total
 
         if validation:
             log('Validation {}/{}.'.format(epoch_i + 1, args.epochs))
             batch_dev = next(generator_dev)
+            loss_total, summaries, y = step.on(batch_dev)
 
-            file_true = args.save_dir + '/validation/batch_true.conllu'
+            with tf.contrib.summary.always_record_summaries():
+                for code, value in summaries.items():
+                    tf.contrib.summary.scalar('{}_DEV'.format(code), value)
+
+            file_gold = args.save_dir + '/validation/{}_gold.conllu'.format(epoch_i)
             sents_dev_true = encoder.decode_batch(batch_dev)
-            write_batch_to_conll_file(sents_dev_true, file_true)
+            conll.write_conllu(file_gold, sents_dev_true)
 
-            batch_dev.y = model(batch_dev.x)
+            file_system = args.save_dir + '/validation/{}_system.conllu'.format(epoch_i)
+            sents_dev_system = encoder.decode_batch(batch_dev, y)
+            conll.write_conllu(file_system, sents_dev_system)
 
-            file_pred = args.save_dir + '/validation/batch_pred.conllu'
-            sents_dev_pred = encoder.decode_batch(batch_dev)
-            write_batch_to_conll_file(sents_dev_pred, file_pred)
+        # save checkpoint
+        if loss_total < loss_total_min:
+            log('Saving checkpoint...')
+            loss_total_min = loss_total
+            checkpoint.save(checkpoint_path + 'model')
 
-            # result = conll.evaluate(file_true, file_pred)
-            # log(result)
+            epochs_early_stopping_counter = 0
+        else:
+            epochs_early_stopping_counter += 1
 
-import conll.conll18_ud_eval_proxy as conllp
+            if epochs_early_stopping_counter >= args.epochs_early_stopping:
+                log('Total loss did not decrease from {} steps. Stopping.')
+                break
 
-def write_batch_to_conll_file(batch: Batch, file):
-
-    sents = []
-    for sent_i in range(len(batch.sents)):
-        sent = batch.sents[sent_i]
-
-        words = list()
-        for word_i in range(len(sent)):
-            columns = [
-                str(sent[word_i].id),                       # 1 id
-                sent[word_i].form,                          # 2 form
-                batch.y[F_LEMMA_CHAR][sent_i][word_i],      # 3 lemma
-                batch.y[F_UPOS][sent_i][word_i],            # 4 upos
-                '_',                                        # 5 xpos
-                '|'.join(batch.y[F_FEATS][sent_i][word_i]), # 6 feats
-                str(batch.y[F_HEAD][sent_i][word_i]),       # 7 head
-                batch.y[F_DEPREL][sent_i][word_i],          # 8 deprel
-                '_',                                        # 9 deps
-                '_'                                         # 10 misc
-            ]
-
-            words.append(conllp.UDWord(columns))
-
-        sents.append(conllp.UDSentence(words))
-
-    os.makedirs(os.path.dirname(file), exist_ok=True)
-    with open(file, 'w+', encoding='utf-8') as f:
-        for sent in sents:
-            # foreach word except root
-            for word in sent.words[1:]:
-                f.write('\t'.join(str(column) for column in word.columns) + '\n')
-
-            f.write('\n')
-            
+        log('Finished training.')
 
 if __name__ == '__main__':
     main()

@@ -236,6 +236,16 @@ class CoNLLFile:
     def tag(self):
         return self._tag
 
+def write_conllu(file, sents: List[UDSentence]):
+    os.makedirs(os.path.dirname(file), exist_ok=True)
+    with open(file, 'w+', encoding='utf-8') as f:
+        for sent in sents:
+            # foreach word except root
+            for word in sent.words[1:]:
+                f.write('\t'.join(str(column) for column in word.columns) + '\n')
+
+            f.write('\n')
+
 def load_conllu(file, is_path=True, name=None, lang=None, tag=None):
     UDR = _just_load_conllu(file, is_path)
 
