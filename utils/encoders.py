@@ -3,10 +3,13 @@ import numpy as np
 import keras
 
 class BasePropEncoder:
-    def __init__(self, property_selector, padded=True, onehot=False):
+    def __init__(self, property_selector, padded=True, onehot=False, softmax=False):
+        assert not (onehot and softmax)
+
         self.property_selector = property_selector
         self.padded = padded
         self.onehot = onehot
+        self.softmax = softmax
         self.dtype = np.float32
 
     def encode(self, sent):
@@ -27,8 +30,22 @@ class BasePropEncoder:
         if self.onehot:
             enc = self._to_onehot(enc)
         return enc
+
+    def decode_batch(self, source):
+        if self.softmax:
+            source = self._from_softmax(source)
+        elif self.onehot:
+            source = self._from_onehot(source)
+        dec = [
+            self._decode(enc) \
+            for enc in source
+        ]
+        return dec
     
     def _encode(self, sent):
+        raise NotImplementedError
+
+    def _decode(self, enc):
         raise NotImplementedError
 
     def _to_padded(self, source):
@@ -38,9 +55,15 @@ class BasePropEncoder:
     def _to_onehot(self, source):
         raise NotImplementedError
 
+    def _from_onehot(self, source):
+        return np.argmax(source, axis=-1)
+
+    def _from_softmax(self, source):
+        return np.around(source).astype(self.dtype)
+
 class BasePropVocabEncoder(BasePropEncoder):
-    def __init__(self, property_selector, vocab: utils.Vocab, padded=True, onehot=False):
-        super(BasePropVocabEncoder, self).__init__(property_selector, padded, onehot)
+    def __init__(self, property_selector, vocab: utils.Vocab, padded=True, onehot=False, softmax=False):
+        super(BasePropVocabEncoder, self).__init__(property_selector, padded, onehot, softmax)
 
         self.vocab = vocab
 
@@ -60,8 +83,8 @@ class BasePropVocabEncoder(BasePropEncoder):
             y=source, num_classes=self.vocab.size, dtype=self.dtype)
 
 class PropVocabEncoder(BasePropVocabEncoder):
-    def __init__(self, property_selector, vocab: utils.Vocab, padded=True, onehot=False):
-        super(PropVocabEncoder, self).__init__(property_selector, vocab, padded, onehot)
+    def __init__(self, property_selector, vocab: utils.Vocab, padded=True, onehot=False, softmax=False):
+        super(PropVocabEncoder, self).__init__(property_selector, vocab, padded, onehot, softmax)
     
     def _encode(self, sent):
         return [
@@ -69,9 +92,14 @@ class PropVocabEncoder(BasePropVocabEncoder):
             for word in sent.words
         ]
 
+    def _decode(self, enc):
+        return [
+            self.vocab.id2item(id) for id in enc
+        ]
+
 class PropIterVocabEncoder(BasePropVocabEncoder):
-    def __init__(self, property_selector, vocab: utils.Vocab, max_length: int, padded=True, onehot=False):
-        super(PropIterVocabEncoder, self).__init__(property_selector, vocab, padded, onehot)
+    def __init__(self, property_selector, vocab: utils.Vocab, max_length: int, padded=True, onehot=False, softmax=False):
+        super(PropIterVocabEncoder, self).__init__(property_selector, vocab, padded, onehot, softmax)
 
         self.max_length = max_length
 
@@ -79,6 +107,12 @@ class PropIterVocabEncoder(BasePropVocabEncoder):
         return [
             self._encode_word(word) \
             for word in sent.words
+        ]
+
+    def _decode(self, enc):
+        return [
+            self._decode_word(word) \
+            for word in enc
         ]
 
     def _encode_word(self, word):
@@ -94,9 +128,15 @@ class PropIterVocabEncoder(BasePropVocabEncoder):
 
         return enc
 
+    def _decode_word(self, word):
+        word = (self.vocab.id2item(id) for id in word if id != utils.vocab.PAD_ID)
+        word = ''.join(word)
+        
+        return word
+
 class HeadPropEncoder(BasePropEncoder):
-    def __init__(self, padded=True, onehot=False):
-        super(HeadPropEncoder, self).__init__(lambda x: x.head, padded, onehot)
+    def __init__(self, padded=True, onehot=False, softmax=False):
+        super(HeadPropEncoder, self).__init__(lambda x: x.head, padded, onehot=True, softmax=False)
 
         self.dtype = np.uint8
 
@@ -104,6 +144,13 @@ class HeadPropEncoder(BasePropEncoder):
         return [
             int(self.property_selector(word)) \
             for word in sent.words
+        ]
+
+    def _decode(self, enc):
+        # TODO mst
+        return [
+            head \
+            for head in enc
         ]
 
     def _to_onehot(self, source):
@@ -118,16 +165,28 @@ class HeadPropEncoder(BasePropEncoder):
 
 class FeatsPropEncoder(BasePropEncoder):
     def __init__(self, vocab: utils.Vocab, padded=True):
-        super(FeatsPropEncoder, self).__init__(lambda x: x.feats, padded, onehot=False)
+        super(FeatsPropEncoder, self).__init__(lambda x: x.feats, padded, onehot=False, softmax=False)
 
         self.vocab = vocab
         self.dtype = np.uint8
+        self.threashold = 0.5
 
     def _encode(self, sent):
         return [
             self._encode_word(word) \
             for word in sent.words
         ]
+
+    def _decode(self, enc):
+        feats = [
+            [
+                self.vocab.id2item(_id[0])
+                for _id in np.argwhere(word > self.threashold) \
+            ] \
+            for word in enc
+        ]
+        
+        return feats
 
     def _encode_word(self, word):
         p = self.property_selector(word)

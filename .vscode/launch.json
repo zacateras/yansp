@@ -20,7 +20,10 @@
                 "--save_dir", "out",
 
                 "--mode", "train",
-                "--lang", "pl"
+                "--lang", "pl",
+
+                "--epochs", "15",
+                "--batch_per_epoch", "2"
             ]
         }
     ]

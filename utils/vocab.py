@@ -14,6 +14,7 @@ class Vocab:
     def __init__(self, item2id, item2cnt):
         self._item2id = item2id
         self._item2cnt = item2cnt
+        self._id2item = dict(zip(item2id.values(), item2id.keys()))
 
     def __str__(self):
         return self._item2id.__str__()
@@ -36,6 +37,12 @@ class Vocab:
             return self._item2id[item]
         else:
             return self._item2id[UNK]
+
+    def id2item(self, id):
+        if id in self._id2item:
+            return self._id2item[id]
+        else:
+            return UNK
 
     @staticmethod
     def from_iterable(iterable):

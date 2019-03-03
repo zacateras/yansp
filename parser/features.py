@@ -9,10 +9,29 @@ F_DEPREL = "DEPREL"
 F_FEATS = "FEATS"
 F_HEAD = "HEAD"
 
+F_X = [
+    F_FORM,
+    F_FORM_CHAR
+]
+
+F_Y = [
+    F_LEMMA_CHAR,
+    F_UPOS,
+    F_FEATS,
+    F_HEAD,
+    F_DEPREL
+]
+
 F_ALL = [F_FORM, F_FORM_CHAR, F_LEMMA_CHAR, F_UPOS, F_FEATS, F_HEAD, F_DEPREL]
 
+class Batch:
+    def __init__(self, sents, x, y):
+        self.sents = sents
+        self.x = x
+        self.y = y
+
 class FeaturesEncoder:
-    def __init__(self, vocabs, args, x_feats = [F_FORM, F_FORM_CHAR], y_feats = [F_LEMMA_CHAR, F_UPOS, F_FEATS, F_HEAD, F_DEPREL]):
+    def __init__(self, vocabs, args, x_feats = F_X, y_feats = F_Y):
         _ = dict()
 
         _[F_FORM] = PropVocabEncoder(lambda w: w.form, vocabs[conll.vocab.WORD])
@@ -23,11 +42,19 @@ class FeaturesEncoder:
         _[F_FEATS] = FeatsPropEncoder(vocabs[conll.vocab.FEATS])
         _[F_HEAD] = HeadPropEncoder(onehot=True)
 
-        self.x_encoders = [_[f] for f in x_feats]
-        self.y_encoders = [_[f] for f in y_feats]
+        self.x_encoders = [(f, _[f]) for f in x_feats]
+        self.y_encoders = [(f, _[f]) for f in y_feats]
 
-    def encode_batch(self, batch):
-        return (
-            [encoder.encode_batch(batch) for encoder in self.x_encoders],
-            [encoder.encode_batch(batch) for encoder in self.y_encoders]
+    def encode_batch(self, sents):
+        return Batch(
+            sents = sents,
+            x = dict((f, encoder.encode_batch(sents)) for (f, encoder) in self.x_encoders),
+            y = dict((f, encoder.encode_batch(sents)) for (f, encoder) in self.y_encoders)
+        )
+    
+    def decode_batch(self, batch: Batch):
+        return Batch(
+            sents = batch.sents,
+            x = None,
+            y = dict((f, encoder.decode_batch(batch.y[f])) for (f, encoder) in self.y_encoders)
         )

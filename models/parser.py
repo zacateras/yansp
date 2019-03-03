@@ -1,6 +1,7 @@
 import keras
 import conll
 import models
+from parser.features import F_FORM, F_FORM_CHAR, F_LEMMA_CHAR, F_UPOS, F_FEATS, F_HEAD, F_DEPREL
 from utils import Embeddings, Vocab
 from typing import List
 
@@ -86,10 +87,10 @@ class ParserModel(keras.Model):
 
     def call(self, inputs):
 
-        word_inp = inputs[0]
+        word_inp = inputs[F_FORM]
         word = self.word_model(word_inp)
 
-        char_inp = inputs[1]
+        char_inp = inputs[F_FORM_CHAR]
         char = self.char_masking(char_inp)
         char = self.char_model(char)
 
@@ -103,4 +104,10 @@ class ParserModel(keras.Model):
         head = self.head_model(x)
         deprel = self.deprel_model(x, head)
 
-        return [lemma, upos, feats, head, deprel]
+        return {
+            F_LEMMA_CHAR: lemma,
+            F_UPOS: upos,
+            F_FEATS: feats,
+            F_HEAD: head,
+            F_DEPREL: deprel
+        }

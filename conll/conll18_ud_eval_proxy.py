@@ -7,6 +7,12 @@ from typing import List, Mapping
 from enum import Enum
 
 class UDWord:
+    def __init__(self, columns):
+        """
+        10 columns of the CoNLL-U file: ID, FORM, LEMMA,...
+        """
+        self.columns = columns
+
     def __str__(self):
         return self.form
 
@@ -15,44 +21,94 @@ class UDWord:
 
     @property
     def id(self):
-        raise NotImplementedError
+        return int(self.columns[ID])
 
-    @property
-    def head(self):
-        raise NotImplementedError
+    @id.setter
+    def id(self, value):
+        self.columns[ID] = str(value)
 
     @property
     def form(self):
-        raise NotImplementedError
+        return self.columns[FORM]
+
+    @form.setter
+    def form(self, value):
+        self.columns[FORM] = value
 
     @property
     def lemma(self):
-        raise NotImplementedError
+        return self.columns[LEMMA]
+
+    @lemma.setter
+    def lemma(self, value):
+        self.columns[LEMMA] = value
 
     @property
     def upos(self):
-        raise NotImplementedError
+        return self.columns[UPOS]
+
+    @upos.setter
+    def upos(self, value):
+        self.columns[UPOS] = value
+
+    @property
+    def xpos(self):
+        return self.columns[XPOS]
+
+    @xpos.setter
+    def xpos(self, value):
+        self.columns[XPOS] = value
 
     @property
     def feats(self):
-        raise NotImplementedError
+        return self.columns[FEATS].split('|')
 
-    @property
-    def deprel(self):
-        raise NotImplementedError
-
-    @property
-    def is_multiword(self):
-        raise NotImplementedError
-
-class UDRoot(UDWord):
-    @property
-    def id(self):
-        return utils.vocab.ROOT
+    @feats.setter
+    def feats(self, value):
+        self.columns[FEATS] = '|'.join(value)
 
     @property
     def head(self):
-        # CoNLL file words point to ROOT at 0 position
+        return int(self.columns[HEAD])
+
+    @head.setter
+    def head(self, value):
+        self.columns[HEAD] = str(value)
+
+    @property
+    def deprel(self):
+        return self.columns[DEPREL]
+
+    @deprel.setter
+    def deprel(self, value):
+        self.columns[DEPREL] = value
+
+    @property
+    def deps(self):
+        return self.columns[DEPS]
+
+    @deps.setter
+    def deps(self, value):
+        self.columns[DEPS] = value
+
+    @property
+    def misc(self):
+        return self.columns[MISC]
+
+    @misc.setter
+    def misc(self, value):
+        self.columns[MISC] = value
+
+    @property
+    def is_multiword(self):
+        return False
+
+class UDRoot(UDWord):
+    def __init__(self):
+        super(UDRoot, self).__init__(None)
+
+    @property
+    def id(self):
         return 0
 
     @property
@@ -68,20 +124,38 @@ class UDRoot(UDWord):
         return utils.vocab.ROOT
 
     @property
-    def feats(self):
+    def xpos(self):
         return utils.vocab.ROOT
+
+    @property
+    def feats(self):
+        return []
+
+    @property
+    def head(self):
+        # CoNLL file words point to ROOT at 0 position
+        return 0
 
     @property
     def deprel(self):
         return utils.vocab.ROOT
 
     @property
+    def deps(self):
+        return utils.vocab.ROOT
+
+    @property
+    def misc(self):
+        return utils.vocab.ROOT
+
+    @property
     def is_multiword(self):
         return False
 
-
 class CoNLLWord(UDWord):
     def __init__(self, word):
+        super(CoNLLWord, self).__init__(word.columns)
+
         self._word = word
 
         if word.is_multiword:
@@ -90,51 +164,6 @@ class CoNLLWord(UDWord):
             self._end = int(bounds[1])
         else:
             self._start = self._end = int(word.columns[ID])
-
-        self._head = int(word.columns[HEAD])
-
-    @property
-    def columns(self):
-        """
-        10 columns of the CoNLL-U file: ID, FORM, LEMMA,...
-        """
-        return self._word.columns
-
-    @property
-    def id(self):
-        return self._start
-
-    @property
-    def start(self):
-        return self._start
-
-    @property
-    def end(self):
-        return self._end
-
-    @property
-    def head(self):
-        return self._head
-
-    @property
-    def form(self):
-        return self._word.columns[FORM]
-
-    @property
-    def lemma(self):
-        return self._word.columns[LEMMA]
-
-    @property
-    def upos(self):
-        return self._word.columns[UPOS]
-
-    @property
-    def feats(self):
-        return self._word.columns[FEATS].split('|')
-
-    @property
-    def deprel(self):
-        return self._word.columns[DEPREL]
 
     @property
     def is_multiword(self):
@@ -155,6 +184,9 @@ class UDSentence:
 
     def __len__(self):
         return len(self._words)
+
+    def __getitem__(self, key):
+        return self._words[key]
 
     @property
     def words(self):
@@ -205,20 +237,11 @@ class CoNLLFile:
         return self._tag
 
 def load_conllu(file, is_path=True, name=None, lang=None, tag=None):
-    file = str(file)
+    UDR = _just_load_conllu(file, is_path)
 
-    if  is_path:
-        assert os.path.exists(file)
-        assert file.endswith('.conllu')
-
+    if is_path:
         if name is None:
             name = os.path.basename(file)
-
-        with open(file) as f:
-            UDR = conll.conll18_ud_eval.load_conllu(f)
-
-    else:
-        UDR = conll.conll18_ud_eval.load_conllu(file)
 
     if name is not None and lang is None and tag is None:
         lang, tag = name.split('-')[0].split('_')
@@ -227,3 +250,22 @@ def load_conllu(file, is_path=True, name=None, lang=None, tag=None):
     sents = UDSentence.from_UDRepresentation(UDR)
 
     return CoNLLFile(name, sents, vocabs, lang=lang, tag=tag)
+
+def evaluate(gold_ud, system_ud):
+    gold_ud = _just_load_conllu(gold_ud)
+    system_ud = _just_load_conllu(system_ud)
+
+    return conll.conll18_ud_eval.evaluate(gold_ud, system_ud)
+
+def _just_load_conllu(file, is_path=True):
+    file = str(file)
+
+    if  is_path:
+        assert os.path.exists(file)
+        assert file.endswith('.conllu')
+
+        with open(file) as f:
+            return conll.conll18_ud_eval.load_conllu(f)
+
+    else:
+        return conll.conll18_ud_eval.load_conllu(file)

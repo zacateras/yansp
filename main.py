@@ -1,5 +1,6 @@
 import argparse
 import time
+import os
 
 import conll
 import utils
@@ -66,27 +67,22 @@ def main():
 
     log('Parsing args...')
     args = parse_args()
-    log('Loading CoNLL-U file...')
+    validation = True if args.dev_file is not None else False
+    
+    log('Loading CoNLL-U training file...')
     conllu_train = conll.load_conllu(args.train_file)
+    sents_train = conllu_train.sents
+
+    if validation:
+        log('Loading CoNLL-U validation file...')
+        conllu_dev = conll.load_conllu(args.dev_file)
+        sents_dev = conllu_dev.sents
+
     log('Loading embeddings file...')
     embeddings = utils.Embeddings.from_file(args.wordvec_file)
 
-    sents = conllu_train.sents
     vocabs = conllu_train.vocabs
     vocabs[conll.vocab.WORD] = embeddings.vocab
-
-    x_feats = [
-        F_FORM,
-        F_FORM_CHAR
-    ]
-
-    y_feats = [
-        F_LEMMA_CHAR,
-        F_UPOS,
-        F_FEATS,
-        F_HEAD,
-        F_DEPREL
-    ]
 
     y_losses = [
         CategoricalCrossentropyLoss(),
@@ -96,14 +92,19 @@ def main():
         CategoricalCrossentropyLoss(),
     ]
 
-    log('Creating generator...')
-    generator = LenwiseSentBatchGenerator(sents, args.batch_size) \
-                if args.batch_lenwise else \
-                RandomSentBatchGenerator(sents, args.batch_size)
+    log('Creating encoder...')
+    encoder = FeaturesEncoder(vocabs, args)
 
-    encoder = FeaturesEncoder(vocabs, args, x_feats=x_feats, y_feats=y_feats)
+    log('Creating train generator...')
+    generator_train = LenwiseSentBatchGenerator(sents_train, args.batch_size) \
+                      if args.batch_lenwise else \
+                      RandomSentBatchGenerator(sents_train, args.batch_size)
+    generator_train = map(encoder.encode_batch, generator_train)
 
-    generator = map(encoder.encode_batch, generator)
+    if validation:
+        log('Creating dev generator...')
+        generator_dev = RandomSentBatchGenerator(sents_dev, args.batch_size)
+        generator_dev = map(encoder.encode_batch, generator_dev)
 
     log('Creating model & optimizer...')
     model = models.ParserModel(args, word_embeddings=embeddings, vocabs=conllu_train.vocabs)
@@ -123,14 +124,15 @@ def main():
 
         log('Epoch {}/{}.'.format(epoch_i + 1, args.epochs))
 
-        for (batch_i, (x, y_true)) in ((i, next(generator)) for i in range(args.batch_per_epoch)):
+        for (batch_i, batch) in ((i, next(generator_train)) for i in range(args.batch_per_epoch)):
             loss_summaries = dict()
             
             with tf.GradientTape() as tape:
-                y_pred = model(x)
+                y_pred = model(batch.x)
+                y_true = batch.y
                 
                 loss_total = 0.0
-                for (feat, yt, yp, l, weight) in zip(y_feats, y_true, y_pred, y_losses, args.loss_weights):
+                for (feat, yt, yp, l, weight) in zip(F_Y, y_true.values(), y_pred.values(), y_losses, args.loss_weights):
                     loss = l(yt, yp)
                     loss_summaries[feat] = loss.numpy()
                     loss_total += weight * loss
@@ -144,6 +146,7 @@ def main():
 
             # save checkpoint
             if batch_i % args.checkpoint_global_step == 0:
+                log('Saving checkpoint...')
                 checkpoint.save(checkpoint_path + 'model')
 
             # log to console
@@ -154,6 +157,60 @@ def main():
             with tf.contrib.summary.record_summaries_every_n_global_steps(args.loss_summary_global_step):
                 for feat, loss in loss_summaries.items():
                     tf.contrib.summary.scalar(feat, loss)
+
+        if validation:
+            log('Validation {}/{}.'.format(epoch_i + 1, args.epochs))
+            batch_dev = next(generator_dev)
+
+            file_true = args.save_dir + '/validation/batch_true.conllu'
+            sents_dev_true = encoder.decode_batch(batch_dev)
+            write_batch_to_conll_file(sents_dev_true, file_true)
+
+            batch_dev.y = model(batch_dev.x)
+
+            file_pred = args.save_dir + '/validation/batch_pred.conllu'
+            sents_dev_pred = encoder.decode_batch(batch_dev)
+            write_batch_to_conll_file(sents_dev_pred, file_pred)
+
+            # result = conll.evaluate(file_true, file_pred)
+            # log(result)
+
+import conll.conll18_ud_eval_proxy as conllp
+
+def write_batch_to_conll_file(batch: Batch, file):
+
+    sents = []
+    for sent_i in range(len(batch.sents)):
+        sent = batch.sents[sent_i]
+
+        words = list()
+        for word_i in range(len(sent)):
+            columns = [
+                str(sent[word_i].id),                       # 1 id
+                sent[word_i].form,                          # 2 form
+                batch.y[F_LEMMA_CHAR][sent_i][word_i],      # 3 lemma
+                batch.y[F_UPOS][sent_i][word_i],            # 4 upos
+                '_',                                        # 5 xpos
+                '|'.join(batch.y[F_FEATS][sent_i][word_i]), # 6 feats
+                str(batch.y[F_HEAD][sent_i][word_i]),       # 7 head
+                batch.y[F_DEPREL][sent_i][word_i],          # 8 deprel
+                '_',                                        # 9 deps
+                '_'                                         # 10 misc
+            ]
+
+            words.append(conllp.UDWord(columns))
+
+        sents.append(conllp.UDSentence(words))
+
+    os.makedirs(os.path.dirname(file), exist_ok=True)
+    with open(file, 'w+', encoding='utf-8') as f:
+        for sent in sents:
+            # foreach word except root
+            for word in sent.words[1:]:
+                f.write('\t'.join(str(column) for column in word.columns) + '\n')
+
+            f.write('\n')
+            
 
 if __name__ == '__main__':
     main()
