@@ -2,6 +2,7 @@ import tensorflow as tf
 import keras
 from parser.features import F_LEMMA_CHAR, F_UPOS, F_FEATS, F_HEAD, F_DEPREL
 from keras import backend as K
+
 categorical_crossentropy = keras.losses.categorical_crossentropy
 
 class CycleLoss:
@@ -49,9 +50,9 @@ class CategoricalCrossentropyLoss:
 
         return loss
 
-class FeatsLoss:
+class CategoricalCrossentropyFromLogitsLoss:
     def __call__(self, y_true, y_pred):
-        loss = categorical_crossentropy(y_true, y_pred)
+        loss = categorical_crossentropy(y_true, y_pred, from_logits=True)
         loss = K.mean(loss)
 
         return loss
@@ -59,7 +60,7 @@ class FeatsLoss:
 y = lambda args: {
     F_LEMMA_CHAR: CategoricalCrossentropyLoss(),
     F_UPOS: CategoricalCrossentropyLoss(),
-    F_FEATS: FeatsLoss(),
+    F_FEATS: CategoricalCrossentropyFromLogitsLoss(),
     F_HEAD: HeadLoss(args.loss_cycle_weight, args.loss_cycle_n, args.batch_size),
     F_DEPREL: CategoricalCrossentropyLoss(),
 }

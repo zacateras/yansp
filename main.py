@@ -167,17 +167,21 @@ def main():
             batch_dev = next(generator_dev)
             loss_total, summaries, y = step.on(batch_dev)
 
-            with tf.contrib.summary.always_record_summaries():
-                for code, value in summaries.items():
-                    tf.contrib.summary.scalar('{}_DEV'.format(code), value)
-
             file_gold = args.save_dir + '/validation/{}_gold.conllu'.format(epoch_i)
-            sents_dev_true = encoder.decode_batch(batch_dev)
-            conll.write_conllu(file_gold, sents_dev_true)
+            sents_dev_gold = encoder.decode_batch(batch_dev)
+            conll.write_conllu(file_gold, sents_dev_gold)
 
             file_system = args.save_dir + '/validation/{}_system.conllu'.format(epoch_i)
             sents_dev_system = encoder.decode_batch(batch_dev, y)
             conll.write_conllu(file_system, sents_dev_system)
+
+            for code, score in parser.scores.y.items():
+                score = score(sents_dev_gold, sents_dev_system)
+                summaries[code] = score
+
+            with tf.contrib.summary.always_record_summaries():
+                for code, value in summaries.items():
+                    tf.contrib.summary.scalar('{}_DEV'.format(code), value)
 
         # save checkpoint
         if loss_total < loss_total_min:
