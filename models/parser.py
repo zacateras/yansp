@@ -1,6 +1,8 @@
 import keras
 import conll
 import models
+
+from models import core
 from parser.features import F_FORM, F_FORM_CHAR, F_LEMMA_CHAR, F_UPOS, F_FEATS, F_HEAD, F_DEPREL
 from utils import Embeddings, Vocab
 from typing import List
@@ -42,13 +44,30 @@ class ParserModel(keras.Model):
 
         #
         # core
-        self.core_model = models.CoreModel(
-            lstm_layers=args.model_lstm_layers,
-            lstm_units=args.model_lstm_units,
-            lstm_dropout=args.model_lstm_dropout,
-            dropout=args.model_dropout,
-            noise=args.model_noise
-        )
+        if args.model_core_type == 'biLSTM':
+            self.core_model = core.biLSTM.Encoder(
+                lstm_layers=args.model_core_bilstm_layers,
+                lstm_units=args.model_core_bilstm_layer_size,
+                lstm_dropout=args.model_core_bilstm_layer_dropout,
+                dropout=args.model_core_bilstm_dropout,
+                noise=args.model_core_bilstm_noise
+            )
+        elif args.model_core_type == 'transformer':
+            self.core_model = core.transformer.Encoder(
+                input_dropout=args.model_core_transformer_input_dropout,
+                hidden_size=args.model_core_transformer_hidden_size,
+                max_length=args.model_core_transformer_sent_max_length,
+                layers=args.model_core_transformer_layers,
+                attention_key_dense_size=args.model_core_transformer_attention_key_dense_size,
+                attention_query_dense_size=args.model_core_transformer_attention_query_dense_size,
+                attention_heads=args.model_core_transformer_attention_heads,
+                attention_dropout=args.model_core_transformer_attention_dropout,
+                pff_filter_size=args.model_core_transformer_pff_filter_size,
+                pff_dropout=args.model_core_transformer_pff_dropout,
+                layer_dropout=args.model_core_transformer_layer_dropout
+            )
+        else:
+            raise ValueError('args.model_core_type must be one of (biLSTM, transformer).')
 
         #
         # outputs

@@ -21,7 +21,7 @@ def parse_args():
     parser.add_argument('--test_file', type=str, default=None, help='Input CoNLL-U test file.')
     parser.add_argument('--save_dir', type=str, default=None, help='Root dir for saving logs and models.')
 
-    parser.add_argument('--mode', default='train', choices=['train', 'predict'])
+    parser.add_argument('--mode', default='train', type=str, choices=['train', 'predict'])
     parser.add_argument('--lang', type=str, help='Language')
 
     parser.add_argument('--epochs', type=int, default=20, help='Numer of epochs.')
@@ -29,11 +29,13 @@ def parse_args():
     parser.add_argument('--batch_per_epoch', type=int, default=50, help='Number of batches per epoch.')
     parser.add_argument('--batch_per_summary', type=int, default=1, help='Summary logs reporting interval.')
     parser.add_argument('--batch_size', type=int, default=1000, help='Size of batches (in words).')
+    parser.add_argument('--batch_size_dev', type=int, default=None, help='Size of batches (in words) during validation phase. If None then whole file is used.')
     parser.add_argument('--batch_lenwise', type=bool, default=False, help='If true, sentences will be sorted and processed in length order')
 
     parser.add_argument('--loss_cycle_weight', type=float, default=1.0, help='Relative weight of cycle loss.')
     parser.add_argument('--loss_cycle_n', type=int, default=3, help='Number of cycles to find.')
     parser.add_argument('--loss_weights', default=[0.2, 0.8, 0.05, 0.05, 0.2], help='Losses weights.')
+
 
     parser.add_argument('--model_word_dense_size', type=int, default=100, help='Size of word model output dense layer.')
     parser.add_argument('--model_word_max_length', type=int, default=30, help='Maximum length of words.')
@@ -41,15 +43,32 @@ def parse_args():
     parser.add_argument('--model_char_conv_layers', type=int, default=3, help='Number of convolution layers in character model.')
     parser.add_argument('--model_char_conv_size', type=int, default=30, help='Size of character model convolution layers.')
     parser.add_argument('--model_char_dense_size', type=int, default=100, help='Size of character model output dense layer.')
-    parser.add_argument('--model_lstm_layers', type=int, default=2, help='Numer of LSTM layers in core model.')
-    parser.add_argument('--model_lstm_units', type=int, default=256, help='Numer of output units for LSTM layers in core model.')
-    parser.add_argument('--model_lstm_dropout', type=int, default=2, help='Dropout rate applied to LSTM layers in core model.')
+
+    parser.add_argument('--model_core_type', default='transformer', type=str, choices=['transformer', 'biLSTM'], help='Type of core model used (either transformer or biLSTM).')
+    parser.add_argument('--model_core_bilstm_layers', type=int, default=2, help='Numer of LSTM layers in biLSTM core model.')
+    parser.add_argument('--model_core_bilstm_layer_size', type=int, default=256, help='Numer of output units for LSTM layers in biLSTM core model.')
+    parser.add_argument('--model_core_bilstm_layer_dropout', type=int, default=2, help='Dropout rate applied to LSTM layers in biLSTM core model.')
+    parser.add_argument('--model_core_bilstm_dropout', type=int, default=0.25, help='GaussianDropout rate applied between biLSTM layers in biLSTM core model.')
+    parser.add_argument('--model_core_bilstm_noise', type=float, default=0.2, help='GaussianNoise rate applied between biLSTM layers in biLSTM core model.')
+    parser.add_argument('--model_core_transformer_input_dropout', type=int, default=0.2, help='Dropout rate applied to input of transformer core model')
+    parser.add_argument('--model_core_transformer_hidden_size', type=int, default=32, help='Sublayer hidden size in transformer core model.')
+    parser.add_argument('--model_core_transformer_sent_max_length', type=int, default=75, help='Assumed maximum lenght of sentence used to generate positional signal in transformer core model.')
+    parser.add_argument('--model_core_transformer_layers', type=int, default=3, help='Number of encoder layers in core transformer model.')
+    parser.add_argument('--model_core_transformer_attention_key_dense_size', type=int, default=20, help='Size of attention key sublayers\' dense layer in core transformer model.')
+    parser.add_argument('--model_core_transformer_attention_query_dense_size', type=int, default=20, help='Size of attention query sublayers\' dense layer in core transformer model.')
+    parser.add_argument('--model_core_transformer_attention_heads', type=int, default=10, help='Number of heads of multi-head attention layer in core transformer model.')
+    parser.add_argument('--model_core_transformer_attention_dropout', type=float, default=0.2, help='Dropout rate applied to each attention sublayer in core transformer model.')
+    parser.add_argument('--model_core_transformer_pff_filter_size', type=int, default=3, help='Size of filter for positional feed-forward sublayer in core transformer model.')
+    parser.add_argument('--model_core_transformer_pff_dropout', type=int, default=0.2, help='Dropout rate applied to each positional feed-forward sublayer in core transformer model.')
+    parser.add_argument('--model_core_transformer_layer_dropout', type=int, default=0.2, help='Dropout rate applied to each encoder layer in core transformer model.')
+
     parser.add_argument('--model_head_dense_size', type=int, default=100, help='Size of head model hidden dense size.')
     parser.add_argument('--model_deprel_dense_size', type=int, default=100, help='Size of deprel model hidden dense size.')
     parser.add_argument('--model_upos_dense_size', type=int, default=100, help='Size of UPOS model hidden dense size.')
     parser.add_argument('--model_feats_max_length', type=int, default=10, help='Maximum length of features.')
     parser.add_argument('--model_feats_dense_size', type=int, default=100, help='Size of feats model hidden dense size.')
     parser.add_argument('--model_lemma_dense_size', type=int, default=25, help='Size of lemma model hidden dense size.')
+
     parser.add_argument('--model_dropout', type=float, default=0.25, help='Dropout rate applied on default to dropout layers.')
     parser.add_argument('--model_noise', type=float, default=0.2, help='Noise StdDev applied on default to noise layers.')
 
@@ -115,7 +134,9 @@ def main():
 
     if validation:
         log('Creating dev generator...')
-        generator_dev = RandomSentBatchGenerator(sents_dev, args.batch_size)
+        generator_dev = RandomSentBatchGenerator(sents_dev, args.batch_size_dev) \
+                        if args.batch_size_dev is not None else \
+                        AllSentBatchGenerator(sents_dev)
         generator_dev = map(encoder.encode_batch, generator_dev)
 
     log('Creating model & optimizer...')
@@ -194,7 +215,7 @@ def main():
             epochs_early_stopping_counter += 1
 
             if epochs_early_stopping_counter >= args.epochs_early_stopping:
-                log('Total loss did not decrease from {} steps. Stopping.')
+                log('Total loss did not decrease from {} steps. Stopping.'.format(epochs_early_stopping_counter))
                 break
 
         log('Finished training.')

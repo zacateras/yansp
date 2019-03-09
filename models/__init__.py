@@ -1,5 +1,5 @@
 from models.character import CharacterModel
-from models.core import CoreModel
+from models.core import biLSTM, transformer
 from models.word import WordModel
 from models.head import HeadModel
 from models.deprel import DeprelModel

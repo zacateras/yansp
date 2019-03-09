@@ -1,4 +1,5 @@
 import random
+import sys
 
 class SentBatchGenerator:
     def __init__(self, sents, batch_size):
@@ -46,7 +47,6 @@ class LenwiseSentBatchGenerator(SentBatchGenerator):
             else:
                 for batch in self.batches:
                     return batch
-        
 
 class RandomSentBatchGenerator(SentBatchGenerator):
     def __init__(self, sents, batch_size):
@@ -64,4 +64,11 @@ class RandomSentBatchGenerator(SentBatchGenerator):
         while True:
             i = random.randint(0, len(x) - 1)
             yield x[i]
-    
+
+class AllSentBatchGenerator(SentBatchGenerator):
+    def __init__(self, sents):
+        super(AllSentBatchGenerator, self).__init__(sents, sys.maxsize)
+
+    def __next__(self):
+        while True:
+            return next(self._iterate_batches(self.sents, self.batch_size))

@@ -1,6 +1,6 @@
 import keras
 
-class CoreModel(keras.Model):
+class Encoder(keras.Model):
     def __init__(
         self,
         lstm_layers: int,
@@ -9,7 +9,7 @@ class CoreModel(keras.Model):
         dropout: float,
         noise: float):
 
-        super(CoreModel, self).__init__()
+        super(Encoder, self).__init__()
 
         self.biLSTM = [
             keras.layers.Bidirectional(

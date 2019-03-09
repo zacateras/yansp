@@ -5,7 +5,7 @@
     "version": "0.2.0",
     "configurations": [
         {
-            "name": "Python: Main (Integrated Terminal)",
+            "name": "Train biLSTM model.",
             "type": "python",
             "request": "launch",
             "program": "${workspaceFolder}/main.py",
@@ -18,10 +18,32 @@
                 "--train_file", "tmp/ud-treebanks-v2.3/UD_Polish-LFG/pl_lfg-ud-train.conllu",
                 "--dev_file", "tmp/ud-treebanks-v2.3/UD_Polish-LFG/pl_lfg-ud-dev.conllu",
                 "--test_file", "tmp/ud-treebanks-v2.3/UD_Polish-LFG/pl_lfg-ud-test.conllu",
-                "--save_dir", "out",
+                "--save_dir", "out/biLSTM",
                 
                 "--epochs", "1000",
-                "--batch_per_epoch", "2"
+                "--batch_per_epoch", "2",
+                "--model_core_type", "biLSTM"
+            ]
+        },
+        {
+            "name": "Train Transformer model.",
+            "type": "python",
+            "request": "launch",
+            "program": "${workspaceFolder}/main.py",
+            "console": "integratedTerminal",
+            "pythonPath": "${workspaceFolder}/.venv3.7/bin/python",
+            "args": [
+                "--mode", "train",
+                "--lang", "pl",
+                "--wordvec_file", "tmp/ft/cc.pl.300.vec.500.top",
+                "--train_file", "tmp/ud-treebanks-v2.3/UD_Polish-LFG/pl_lfg-ud-train.conllu",
+                "--dev_file", "tmp/ud-treebanks-v2.3/UD_Polish-LFG/pl_lfg-ud-dev.conllu",
+                "--test_file", "tmp/ud-treebanks-v2.3/UD_Polish-LFG/pl_lfg-ud-test.conllu",
+                "--save_dir", "out/transformer",
+                
+                "--epochs", "1000",
+                "--batch_per_epoch", "50",
+                "--model_core_type", "transformer"
             ]
         }
     ]
