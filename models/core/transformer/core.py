@@ -4,7 +4,8 @@ import tensorflow as tf
 import numpy as np
 import math
 
-from .layers import EncoderLayer, DecoderLayer, LayerNorm
+from .normalization import LayerNorm
+from .layers import EncoderLayer, DecoderLayer
 
 def _gen_timing_signal(length, channels, min_timescale=1.0, max_timescale=1.0e4):
     position = np.arange(length)
@@ -42,9 +43,7 @@ class Encoder(keras.Model):
         super(Encoder, self).__init__()
 
         self.input_dropout = keras.layers.Dropout(input_dropout)
-
         self.embedding_projection = keras.layers.Dense(hidden_size)
-
         self.timing_signal = _gen_timing_signal(max_length, hidden_size)
 
         self.enc_all = [
@@ -60,7 +59,7 @@ class Encoder(keras.Model):
             for i in range(layers)
         ]
 
-        self.norm = LayerNorm(hidden_size)
+        self.norm = LayerNorm()
 
     def call(self, inputs):
         x = self.input_dropout(inputs)
@@ -71,6 +70,6 @@ class Encoder(keras.Model):
         for enc in self.enc_all:
             x = enc(x)
 
-        # x = self.norm(x)
+        x = self.norm(x)
 
         return x

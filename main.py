@@ -218,7 +218,7 @@ def main():
                 log('Total loss did not decrease from {} steps. Stopping.'.format(epochs_early_stopping_counter))
                 break
 
-        log('Finished training.')
+    log('Finished training.')
 
 if __name__ == '__main__':
     main()

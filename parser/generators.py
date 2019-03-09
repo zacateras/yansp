@@ -69,6 +69,9 @@ class AllSentBatchGenerator(SentBatchGenerator):
     def __init__(self, sents):
         super(AllSentBatchGenerator, self).__init__(sents, sys.maxsize)
 
+        # just one batch
+        self.batch = next(self._iterate_batches(self.sents, self.batch_size))
+
     def __next__(self):
         while True:
-            return next(self._iterate_batches(self.sents, self.batch_size))
+            return self.batch
