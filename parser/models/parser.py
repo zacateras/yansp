@@ -1,9 +1,17 @@
 import keras
 import conll
-import models
 
-from models import core
-from parser.features import F_FORM, F_FORM_CHAR, F_LEMMA_CHAR, F_UPOS, F_FEATS, F_HEAD, F_DEPREL
+from .word import WordModel
+from .character import CharacterModel
+from .core import biLSTM, transformer
+from .lemma import LemmaModel
+from .pos import PosModel
+from .feats import FeatsModel
+from .head import HeadModel
+from .deprel import DeprelModel
+
+import parser.features as F
+
 from utils import Embeddings, Vocab
 from typing import List
 
@@ -23,7 +31,7 @@ class ParserModel(keras.Model):
 
         #
         # inputs
-        self.word_model = models.WordModel(
+        self.word_model = WordModel(
             embeddings=word_embeddings,
             dense_size=args.model_word_dense_size,
             dropout=args.model_dropout
@@ -31,7 +39,7 @@ class ParserModel(keras.Model):
 
         self.char_masking = keras.layers.Masking(mask_value=0)
         self.char_model = keras.layers.TimeDistributed(
-            models.CharacterModel(
+            CharacterModel(
                 vocab_size=char_vocab.size,
                 embedding_dim=args.model_char_embedding_dim,
                 conv_layers=args.model_char_conv_layers,
@@ -45,7 +53,7 @@ class ParserModel(keras.Model):
         #
         # core
         if args.model_core_type == 'biLSTM':
-            self.core_model = core.biLSTM.Encoder(
+            self.core_model = biLSTM.Encoder(
                 lstm_layers=args.model_core_bilstm_layers,
                 lstm_units=args.model_core_bilstm_layer_size,
                 lstm_dropout=args.model_core_bilstm_layer_dropout,
@@ -53,7 +61,7 @@ class ParserModel(keras.Model):
                 noise=args.model_core_bilstm_noise
             )
         elif args.model_core_type == 'transformer':
-            self.core_model = core.transformer.Encoder(
+            self.core_model = transformer.Encoder(
                 input_dropout=args.model_core_transformer_input_dropout,
                 hidden_size=args.model_core_transformer_hidden_size,
                 max_length=args.model_core_transformer_sent_max_length,
@@ -71,30 +79,7 @@ class ParserModel(keras.Model):
 
         #
         # outputs
-        self.head_model = models.HeadModel(
-            dense_size=args.model_head_dense_size,
-            dropout=args.model_dropout
-        )
-
-        self.deprel_model = models.DeprelModel(
-            deprel_count=deprel_vocab.size,
-            dense_size=args.model_deprel_dense_size,
-            dropout=args.model_dropout
-        )
-
-        self.upos_model = models.PosModel(
-            pos_count=upos_vocab.size,
-            dense_size=args.model_upos_dense_size,
-            dropout=args.model_dropout
-        )
-
-        self.feats_model = models.FeatsModel(
-            feats_count=feats_vocab.size,
-            dense_size=args.model_feats_dense_size,
-            dropout=args.model_dropout
-        )
-
-        self.lemma_model = models.LemmaModel(
+        self.lemma_model = LemmaModel(
             word_max_length=args.model_word_max_length,
             char_vocab_size=char_vocab.size,
             char_embedding_dim=args.model_char_embedding_dim,
@@ -104,12 +89,35 @@ class ParserModel(keras.Model):
             dropout=args.model_dropout
         )
 
+        self.upos_model = PosModel(
+            pos_count=upos_vocab.size,
+            dense_size=args.model_upos_dense_size,
+            dropout=args.model_dropout
+        )
+
+        self.head_model = HeadModel(
+            dense_size=args.model_head_dense_size,
+            dropout=args.model_dropout
+        )
+
+        self.feats_model = FeatsModel(
+            feats_count=feats_vocab.size,
+            dense_size=args.model_feats_dense_size,
+            dropout=args.model_dropout
+        )
+
+        self.deprel_model = DeprelModel(
+            deprel_count=deprel_vocab.size,
+            dense_size=args.model_deprel_dense_size,
+            dropout=args.model_dropout
+        )
+
     def call(self, inputs):
 
-        word_inp = inputs[F_FORM]
+        word_inp = inputs[F.FORM]
         word = self.word_model(word_inp)
 
-        char_inp = inputs[F_FORM_CHAR]
+        char_inp = inputs[F.FORM_CHAR]
         char = self.char_masking(char_inp)
         char = self.char_model(char)
 
@@ -124,9 +132,9 @@ class ParserModel(keras.Model):
         deprel = self.deprel_model(x, head)
 
         return {
-            F_LEMMA_CHAR: lemma,
-            F_UPOS: upos,
-            F_FEATS: feats,
-            F_HEAD: head,
-            F_DEPREL: deprel
+            F.LEMMA_CHAR: lemma,
+            F.UPOS: upos,
+            F.FEATS: feats,
+            F.HEAD: head,
+            F.DEPREL: deprel
         }

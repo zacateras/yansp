@@ -1,4 +1,4 @@
 import parser.losses
-import parser.generators
+import parser.encoders
 import parser.features
 import parser.scores

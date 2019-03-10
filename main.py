@@ -1,17 +1,17 @@
 import argparse
 import time
 
-import conll
-import utils
-import models
-
+import tensorflow as tf
 import numpy as np
 
-import parser
-from parser.features import *
-from parser.generators import *
+import conll
+import utils
 
-import tensorflow as tf
+from utils.generators import LenwiseBatchGenerator, RandomBatchGenerator, AllAtOnceBatchGenerator
+from parser.encoders import FeaturesEncoder
+from parser.models import ParserModel
+import parser.losses
+import parser.scores
 
 def parse_args():
     parser = argparse.ArgumentParser()
@@ -91,7 +91,7 @@ class Step:
         y_true = batch.y
         
         loss_total = 0.0
-        for (feat, yt, yp, l, weight) in zip(F_Y, y_true.values(), y_pred.values(), self._losses.values(), self._weights):
+        for (feat, yt, yp, l, weight) in zip(y_true.keys(), y_true.values(), y_pred.values(), self._losses.values(), self._weights):
             loss = l(yt, yp)
             loss_total += weight * loss
 
@@ -127,20 +127,20 @@ def main():
     encoder = FeaturesEncoder(vocabs, args)
 
     log('Creating train generator...')
-    generator_train = LenwiseSentBatchGenerator(sents_train, args.batch_size) \
+    generator_train = LenwiseBatchGenerator(sents_train, args.batch_size) \
                       if args.batch_lenwise else \
-                      RandomSentBatchGenerator(sents_train, args.batch_size)
+                      RandomBatchGenerator(sents_train, args.batch_size)
     generator_train = map(encoder.encode_batch, generator_train)
 
     if validation:
         log('Creating dev generator...')
-        generator_dev = RandomSentBatchGenerator(sents_dev, args.batch_size_dev) \
+        generator_dev = RandomBatchGenerator(sents_dev, args.batch_size_dev) \
                         if args.batch_size_dev is not None else \
-                        AllSentBatchGenerator(sents_dev)
+                        AllAtOnceBatchGenerator(sents_dev)
         generator_dev = map(encoder.encode_batch, generator_dev)
 
     log('Creating model & optimizer...')
-    model = models.ParserModel(args, word_embeddings=embeddings, vocabs=conllu_train.vocabs)
+    model = ParserModel(args, word_embeddings=embeddings, vocabs=conllu_train.vocabs)
     optimizer = tf.train.AdamOptimizer(learning_rate=0.001, beta1=0.9, beta2=0.9, epsilon=1e-4)
 
     log('Loading checkpoints...')
