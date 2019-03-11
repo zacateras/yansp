@@ -36,7 +36,7 @@ def feats(gold, system):
     return tp / total / (1.0 + fp)
 
 y = {
-    'LEMMA_ACC': Accuracy(levenshtein_norm),
+    'LEMMA_ACC': Accuracy(lambda gold, system: 1 - levenshtein_norm(gold, system)),
     'UPOS_ACC': Accuracy(Eq(lambda x: x.upos)),
     'FEATS_ACC': Accuracy(feats),
     'HEAD_ACC': Accuracy(Eq(lambda x: x.head)),

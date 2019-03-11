@@ -1,15 +1,11 @@
-import random
-import string
+from hashlib import blake2b
 
-def genkey(value, length = 8, chars = string.ascii_letters + string.digits):
+def genkey(value, length = 8):
     """
-    Return a string of `length` characters chosen pseudo-randomly from
-    `chars` using `value` as the seed.
-
     >>> ' '.join(genkey(i) for i in  range(5))
     '0UAqFt42 i0VpEq24 76dfZeT3 oHwLM35E ogyjesdg'
     """
-    generator = random.Random()
-    generator.seed(value)
+    if not isinstance(value, str):
+        raise ValueError('Expected `value` to be `str`.')
 
-    return ''.join(generator.choice(chars) for _ in range(length))
+    return blake2b(value.encode('utf-8'), digest_size=4).hexdigest()

@@ -55,9 +55,9 @@ def parse_args():
     parser.add_argument('--model_core_transformer_hidden_size', type=int, default=32, help='Sublayer hidden size in transformer core model.')
     parser.add_argument('--model_core_transformer_sent_max_length', type=int, default=75, help='Assumed maximum lenght of sentence used to generate positional signal in transformer core model.')
     parser.add_argument('--model_core_transformer_layers', type=int, default=3, help='Number of encoder layers in core transformer model.')
+    parser.add_argument('--model_core_transformer_attention_heads', type=int, default=10, help='Number of heads of multi-head attention layer in core transformer model.')
     parser.add_argument('--model_core_transformer_attention_key_dense_size', type=int, default=20, help='Size of attention key sublayers\' dense layer in core transformer model.')
     parser.add_argument('--model_core_transformer_attention_query_dense_size', type=int, default=20, help='Size of attention query sublayers\' dense layer in core transformer model.')
-    parser.add_argument('--model_core_transformer_attention_heads', type=int, default=10, help='Number of heads of multi-head attention layer in core transformer model.')
     parser.add_argument('--model_core_transformer_attention_dropout', type=float, default=0.2, help='Dropout rate applied to each attention sublayer in core transformer model.')
     parser.add_argument('--model_core_transformer_pff_filter_size', type=int, default=3, help='Size of filter for positional feed-forward sublayer in core transformer model.')
     parser.add_argument('--model_core_transformer_pff_dropout', type=int, default=0.2, help='Dropout rate applied to each positional feed-forward sublayer in core transformer model.')
@@ -88,6 +88,9 @@ def model_signature_from_args(args):
     if args.model_core_type == 'transformer':
         pm.append(str(args.model_core_transformer_layers))
         pm.append(str(args.model_core_transformer_hidden_size))
+        pm.append('ah' + str(args.model_core_transformer_attention_heads))
+        pm.append('ak' + str(args.model_core_transformer_attention_key_dense_size))
+        pm.append('aq' + str(args.model_core_transformer_attention_query_dense_size))
         p = (x for x in p if not (x[0].startswith('model_core') and not x[0].startswith('model_core_transformer')))
 
     elif args.model_core_type == 'biLSTM':
@@ -98,7 +101,7 @@ def model_signature_from_args(args):
     p = list(p)
 
     # model paramerization hash string
-    h = utils.genkey(hash(tuple(sorted(p, key=lambda x: x[0]))))
+    h = utils.genkey(str(sorted(p, key=lambda x: x[0])))
 
     return '.'.join(pm) + '-' + h, p
 
@@ -112,7 +115,7 @@ class Step:
         self._weights = weights
 
     def on(self, batch):
-        summaries = dict()
+        losses = dict()
 
         y_pred = self._model(batch.x)
         y_true = batch.y
@@ -122,11 +125,11 @@ class Step:
             loss = l(yt, yp)
             loss_total += weight * loss
 
-            summaries['{}_LOSS'.format(feat)] = loss.numpy()
+            losses[feat] = loss.numpy()
 
-        summaries['TOTAL_LOSS'] = loss_total.numpy()
+        losses['total'] = loss_total.numpy()
 
-        return loss_total, summaries, y_pred
+        return loss_total, losses, y_pred
 
 def main():
     tf.enable_eager_execution()
@@ -202,19 +205,19 @@ def main():
             global_step = tf.train.get_or_create_global_step()
 
             with tf.GradientTape() as tape:
-                loss_total, summaries, _ = step.on(batch)
+                loss_total, losses, _ = step.on(batch)
 
             grads = tape.gradient(loss_total, model.trainable_variables)
             optimizer.apply_gradients(zip(grads, model.trainable_variables), global_step=global_step)
 
             # log to console
             if batch_i % args.batch_per_summary == 0:
-                log(summaries)
+                log(losses)
 
             # log to file
             with tf.contrib.summary.record_summaries_every_n_global_steps(args.batch_per_summary):
-                for code, value in summaries.items():
-                    tf.contrib.summary.scalar('{}_TRAIN'.format(code), value)
+                for code, value in losses.items():
+                    tf.contrib.summary.scalar('train_loss/{}'.format(code), value)
 
             # initialize with first step - new or checkpointed model
             if 'loss_total_min' not in locals():       
@@ -223,7 +226,7 @@ def main():
         if validation:
             log('Validation {}/{}.'.format(epoch_i + 1, args.epochs))
             batch_dev = next(generator_dev)
-            loss_total, summaries, y = step.on(batch_dev)
+            loss_total, losses, y = step.on(batch_dev)
 
             file_gold = base_dir + '/validation/{}_gold.conllu'.format(epoch_i)
             sents_dev_gold = encoder.decode_batch(batch_dev)
@@ -233,16 +236,21 @@ def main():
             sents_dev_system = encoder.decode_batch(batch_dev, y)
             conll.write_conllu(file_system, sents_dev_system)
 
+            summaries = dict()
+
+            for code, loss in losses.items():
+                summaries['dev_loss/{}'.format(code)] = loss
+
             for code, score in parser.scores.y.items():
                 score = score(sents_dev_gold, sents_dev_system)
-                summaries[code] = score
+                summaries['dev_score/{}'.format(code)] = score
 
             for code, score in conll.evaluate(file_gold, file_system).items():
-                summaries['CONLL_{}_F1'.format(code.upper())] = score.f1
+                summaries['dev_conll/{}/f1'.format(code)] = score.f1
 
             with tf.contrib.summary.always_record_summaries():
                 for code, value in summaries.items():
-                    tf.contrib.summary.scalar('{}_DEV'.format(code), value)
+                    tf.contrib.summary.scalar(code, value)
 
         # save checkpoint
         if loss_total < loss_total_min:
