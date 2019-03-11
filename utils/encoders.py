@@ -2,12 +2,13 @@ import utils
 import numpy as np
 import keras
 
-class BasePropEncoder:
-    def __init__(self, property_selector, padded=True, onehot=False, softmax=False):
+class BaseSentEncoder:
+    def __init__(self, property_selector, padded=True, onehot=False, softmax=False, pad_with=utils.vocab.PAD_ID):
         assert not (onehot and softmax)
 
         self.property_selector = property_selector
         self.padded = padded
+        self.pad_with = pad_with
         self.onehot = onehot
         self.softmax = softmax
         self.dtype = np.float32
@@ -20,39 +21,40 @@ class BasePropEncoder:
             enc = self._to_onehot(enc)
         return enc
 
-    def encode_batch(self, source):
-        enc = [
-            self._encode(sent) \
-            for sent in source
+    def encode_batch(self, sents):
+        encs = [
+            self._encode(item) \
+            for item in sents
         ]
         if self.padded:
-            enc = self._to_padded(enc)
+            encs = self._to_padded(encs)
         if self.onehot:
-            enc = self._to_onehot(enc)
-        return enc
-
-    def decode_batch(self, source):
-        if self.softmax:
-            source = self._from_softmax(source)
-        elif self.onehot:
-            source = self._from_onehot(source)
-        dec = [
-            self._decode(enc) \
-            for enc in source
-        ]
-        return dec
+            encs = self._to_onehot(encs)
+        return encs
     
     def _encode(self, sent):
         raise NotImplementedError
 
-    def _decode(self, enc):
-        raise NotImplementedError
-
     def _to_padded(self, source):
         return keras.preprocessing.sequence.pad_sequences(
-            source, dtype=self.dtype, padding='post', truncating='post', value=utils.vocab.PAD_ID)
+            source, dtype=self.dtype, padding='post', truncating='post', value=self.pad_with)
 
     def _to_onehot(self, source):
+        raise NotImplementedError
+
+
+    def decode_batch(self, sents, encs):
+        if self.softmax:
+            encs = self._from_softmax(encs)
+        elif self.onehot:
+            encs = self._from_onehot(encs)
+        decs = [
+            self._decode(sent, enc) \
+            for sent, enc in zip(sents, encs)
+        ]
+        return decs
+
+    def _decode(self, sent, enc):
         raise NotImplementedError
 
     def _from_onehot(self, source):
@@ -61,9 +63,9 @@ class BasePropEncoder:
     def _from_softmax(self, source):
         return np.around(source).astype(self.dtype)
 
-class BasePropVocabEncoder(BasePropEncoder):
+class BaseSentVocabEncoder(BaseSentEncoder):
     def __init__(self, property_selector, vocab: utils.Vocab, padded=True, onehot=False, softmax=False):
-        super(BasePropVocabEncoder, self).__init__(property_selector, padded, onehot, softmax)
+        super(BaseSentVocabEncoder, self).__init__(property_selector, padded, onehot, softmax)
 
         self.vocab = vocab
 
@@ -82,9 +84,9 @@ class BasePropVocabEncoder(BasePropEncoder):
         return keras.utils.to_categorical(
             y=source, num_classes=self.vocab.size, dtype=self.dtype)
 
-class PropVocabEncoder(BasePropVocabEncoder):
+class SentVocabEncoder(BaseSentVocabEncoder):
     def __init__(self, property_selector, vocab: utils.Vocab, padded=True, onehot=False, softmax=False):
-        super(PropVocabEncoder, self).__init__(property_selector, vocab, padded, onehot, softmax)
+        super(SentVocabEncoder, self).__init__(property_selector, vocab, padded, onehot, softmax)
     
     def _encode(self, sent):
         return [
@@ -92,14 +94,14 @@ class PropVocabEncoder(BasePropVocabEncoder):
             for word in sent.words
         ]
 
-    def _decode(self, enc):
+    def _decode(self, sent, enc):
         return [
             self.vocab.id2item(id) for id in enc
         ]
 
-class PropIterVocabEncoder(BasePropVocabEncoder):
+class SentIterVocabEncoder(BaseSentVocabEncoder):
     def __init__(self, property_selector, vocab: utils.Vocab, max_length: int, padded=True, onehot=False, softmax=False):
-        super(PropIterVocabEncoder, self).__init__(property_selector, vocab, padded, onehot, softmax)
+        super(SentIterVocabEncoder, self).__init__(property_selector, vocab, padded, onehot, softmax)
 
         self.max_length = max_length
 
@@ -109,7 +111,7 @@ class PropIterVocabEncoder(BasePropVocabEncoder):
             for word in sent.words
         ]
 
-    def _decode(self, enc):
+    def _decode(self, sent, enc):
         return [
             self._decode_word(word) \
             for word in enc

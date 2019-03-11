@@ -1,4 +1,5 @@
-from utils.encoders import BasePropEncoder, PropVocabEncoder, PropIterVocabEncoder
+from utils.encoders import BaseSentEncoder, SentVocabEncoder, SentIterVocabEncoder
+from utils.mst import mst
 
 import conll
 import conll.vocab
@@ -9,14 +10,14 @@ import keras
 import numpy as np
 
 class Batch:
-    def __init__(self, sents, x, y):
-        self.sents = sents
+    def __init__(self, items, x, y):
+        self.items = items
         self.x = x
         self.y = y
 
-class HeadPropEncoder(BasePropEncoder):
+class HeadSentEncoder(BaseSentEncoder):
     def __init__(self, padded=True, onehot=False, softmax=False):
-        super(HeadPropEncoder, self).__init__(lambda x: x.head, padded, onehot=True, softmax=False)
+        super(HeadSentEncoder, self).__init__(lambda x: x.head, padded, onehot=True, softmax=False)
 
         self.dtype = np.uint8
 
@@ -24,13 +25,6 @@ class HeadPropEncoder(BasePropEncoder):
         return [
             int(self.property_selector(word)) \
             for word in sent.words
-        ]
-
-    def _decode(self, enc):
-        # TODO mst
-        return [
-            head \
-            for head in enc
         ]
 
     def _to_onehot(self, source):
@@ -43,9 +37,24 @@ class HeadPropEncoder(BasePropEncoder):
 
         return keras.utils.to_categorical(source, num_classes, dtype=self.dtype)
 
-class FeatsPropEncoder(BasePropEncoder):
+    def _decode(self, sent, enc):
+        num_words = len(sent)
+
+        # wipe out paddings
+        enc = enc[:num_words, :num_words]
+        # mst is implemented in a way that this encoding must be transposed
+        enc = np.transpose(enc)
+
+        x = mst(enc)
+
+        return x
+
+    def _from_onehot(self, source):
+        return source
+
+class FeatsSentEncoder(BaseSentEncoder):
     def __init__(self, vocab, padded=True):
-        super(FeatsPropEncoder, self).__init__(lambda x: x.feats, padded, onehot=False, softmax=False)
+        super(FeatsSentEncoder, self).__init__(lambda x: x.feats, padded, onehot=False, softmax=False)
 
         self.vocab = vocab
         self.dtype = np.uint8
@@ -57,7 +66,7 @@ class FeatsPropEncoder(BasePropEncoder):
             for word in sent.words
         ]
 
-    def _decode(self, enc):
+    def _decode(self, sent, enc):
         feats = [
             [
                 self.vocab.id2item(_id[0])
@@ -81,20 +90,20 @@ class FeaturesEncoder:
     def __init__(self, vocabs, args, x_feats = F.X, y_feats = F.Y):
         _ = dict()
 
-        _[F.FORM] = PropVocabEncoder(lambda w: w.form, vocabs[conll.vocab.WORD])
-        _[F.FORM_CHAR] = PropIterVocabEncoder(lambda w: w.form, vocabs[conll.vocab.CHAR], args.model_word_max_length)
-        _[F.LEMMA_CHAR] = PropIterVocabEncoder(lambda w: w.lemma, vocabs[conll.vocab.CHAR], args.model_word_max_length, onehot=True)
-        _[F.UPOS] = PropVocabEncoder(lambda w: w.upos, vocabs[conll.vocab.UPOS], onehot=True)
-        _[F.DEPREL] = PropVocabEncoder(lambda w: w.deprel, vocabs[conll.vocab.DEPREL], onehot=True)
-        _[F.FEATS] = FeatsPropEncoder(vocabs[conll.vocab.FEATS])
-        _[F.HEAD] = HeadPropEncoder(onehot=True)
+        _[F.FORM] = SentVocabEncoder(lambda w: w.form, vocabs[conll.vocab.WORD])
+        _[F.FORM_CHAR] = SentIterVocabEncoder(lambda w: w.form, vocabs[conll.vocab.CHAR], args.model_word_max_length)
+        _[F.LEMMA_CHAR] = SentIterVocabEncoder(lambda w: w.lemma, vocabs[conll.vocab.CHAR], args.model_word_max_length, onehot=True)
+        _[F.UPOS] = SentVocabEncoder(lambda w: w.upos, vocabs[conll.vocab.UPOS], onehot=True)
+        _[F.DEPREL] = SentVocabEncoder(lambda w: w.deprel, vocabs[conll.vocab.DEPREL], onehot=True)
+        _[F.FEATS] = FeatsSentEncoder(vocabs[conll.vocab.FEATS])
+        _[F.HEAD] = HeadSentEncoder(onehot=True)
 
         self.x_encoders = [(f, _[f]) for f in x_feats]
         self.y_encoders = [(f, _[f]) for f in y_feats]
 
     def encode_batch(self, sents):
         return Batch(
-            sents = sents,
+            items = sents,
             x = dict((f, encoder.encode_batch(sents)) for (f, encoder) in self.x_encoders),
             y = dict((f, encoder.encode_batch(sents)) for (f, encoder) in self.y_encoders)
         )
@@ -103,12 +112,12 @@ class FeaturesEncoder:
         if y is None:
             y = batch.y
 
-        y = dict((f, encoder.decode_batch(y[f])) for (f, encoder) in self.y_encoders)
+        y = dict((f, encoder.decode_batch(batch.items, y[f])) for (f, encoder) in self.y_encoders)
 
         sents = []
 
-        for sent_i in range(len(batch.sents)):
-            sent = batch.sents[sent_i]
+        for sent_i in range(len(batch.items)):
+            sent = batch.items[sent_i]
 
             words = list()
             for word_i in range(len(sent)):
