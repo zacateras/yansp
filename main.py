@@ -1,5 +1,6 @@
 import argparse
 import time
+import os.path
 
 import tensorflow as tf
 import numpy as np
@@ -15,11 +16,11 @@ import parser.scores
 
 def parse_args():
     parser = argparse.ArgumentParser()
-    parser.add_argument('--wordvec_file', type=str, default=None, help='Input file for word vectors.')
-    parser.add_argument('--train_file', type=str, default=None, help='Input CoNLL-U train file.')
-    parser.add_argument('--dev_file', type=str, default=None, help='Input CoNLL-U dev file.')
-    parser.add_argument('--test_file', type=str, default=None, help='Input CoNLL-U test file.')
-    parser.add_argument('--save_dir', type=str, default=None, help='Root dir for saving logs and models.')
+    parser.add_argument('--wordvec_file', type=str, help='Input file for word vectors.')
+    parser.add_argument('--train_file', type=str, required=True, help='Input CoNLL-U train file.')
+    parser.add_argument('--dev_file', type=str, help='Input CoNLL-U dev file.')
+    parser.add_argument('--test_file', type=str, help='Input CoNLL-U test file.')
+    parser.add_argument('--save_dir', type=str, required=True, help='Root dir for saving logs and models.')
 
     parser.add_argument('--mode', default='train', type=str, choices=['train', 'predict'])
     parser.add_argument('--lang', type=str, help='Language')
@@ -75,6 +76,32 @@ def parse_args():
     args = parser.parse_args()
     return args
 
+def model_signature_from_args(args):
+    args_vars = vars(args)
+
+    # model parametrization properties
+    p = (x for x in zip(args_vars.keys(), args_vars.values()) if x[0].startswith('model_'))
+
+    # model meaningful parametrization properties
+    pm = [args.model_core_type]
+
+    if args.model_core_type == 'transformer':
+        pm.append(str(args.model_core_transformer_layers))
+        pm.append(str(args.model_core_transformer_hidden_size))
+        p = (x for x in p if not (x[0].startswith('model_core') and not x[0].startswith('model_core_transformer')))
+
+    elif args.model_core_type == 'biLSTM':
+        pm.append(str(args.model_core_bilstm_layers))
+        pm.append(str(args.model_core_bilstm_layer_size))
+        p = (x for x in p if not (x[0].startswith('model_core') and not x[0].startswith('model_core_bilstm')))
+
+    p = list(p)
+
+    # model paramerization hash string
+    h = utils.genkey(hash(tuple(sorted(p, key=lambda x: x[0]))))
+
+    return '.'.join(pm) + '-' + h, p
+
 def log(message):
     print('{} {}'.format(time.strftime("%Y-%m-%d %H:%M:%S"), message))
 
@@ -107,6 +134,8 @@ def main():
     log('Parsing args...')
     args = parse_args()
     validation = True if args.dev_file is not None else False
+    signature, model_conf = model_signature_from_args(args)
+    base_dir = os.path.join(args.save_dir, signature)
     
     log('Loading CoNLL-U training file...')
     conllu_train = conll.load_conllu(args.train_file)
@@ -143,13 +172,21 @@ def main():
     model = ParserModel(args, word_embeddings=embeddings, vocabs=conllu_train.vocabs)
     optimizer = tf.train.AdamOptimizer(learning_rate=0.001, beta1=0.9, beta2=0.9, epsilon=1e-4)
 
+    log('Saving model parameters summary...')
+    model_conf_file = os.path.join(base_dir, 'model.conf')
+    if not os.path.exists(model_conf_file):
+        os.makedirs(os.path.dirname(model_conf_file), exist_ok=True)
+        with open(model_conf_file, 'w+') as f:
+            for x in model_conf:
+                f.write('{}={}\n'.format(x[0], x[1]))
+
     log('Loading checkpoints...')
-    checkpoint_path = args.save_dir + '/checkpoints/'
+    checkpoint_path = base_dir + '/checkpoints/'
     checkpoint = tf.train.Checkpoint(model=model, optimizer=optimizer, optimizer_step=tf.train.get_or_create_global_step())
     checkpoint.restore(tf.train.latest_checkpoint(checkpoint_path))
 
     log('Initializing logger...')
-    logger = tf.contrib.summary.create_file_writer(args.save_dir + '/logs/')
+    logger = tf.contrib.summary.create_file_writer(base_dir + '/logs/')
     logger.set_as_default()
 
     epoch_start = tf.train.get_or_create_global_step() / args.batch_per_epoch
@@ -188,17 +225,20 @@ def main():
             batch_dev = next(generator_dev)
             loss_total, summaries, y = step.on(batch_dev)
 
-            file_gold = args.save_dir + '/validation/{}_gold.conllu'.format(epoch_i)
+            file_gold = base_dir + '/validation/{}_gold.conllu'.format(epoch_i)
             sents_dev_gold = encoder.decode_batch(batch_dev)
             conll.write_conllu(file_gold, sents_dev_gold)
 
-            file_system = args.save_dir + '/validation/{}_system.conllu'.format(epoch_i)
+            file_system = base_dir + '/validation/{}_system.conllu'.format(epoch_i)
             sents_dev_system = encoder.decode_batch(batch_dev, y)
             conll.write_conllu(file_system, sents_dev_system)
 
             for code, score in parser.scores.y.items():
                 score = score(sents_dev_gold, sents_dev_system)
                 summaries[code] = score
+
+            for code, score in conll.evaluate(file_gold, file_system).items():
+                summaries['CONLL_{}_F1'.format(code.upper())] = score.f1
 
             with tf.contrib.summary.always_record_summaries():
                 for code, value in summaries.items():

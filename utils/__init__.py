@@ -1,2 +1,3 @@
-from utils.embeddings import *
-from utils.vocab import *
+from .embeddings import *
+from .vocab import *
+from .genkey import genkey
