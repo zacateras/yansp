@@ -158,12 +158,12 @@ def main():
     
     log('Loading CoNLL-U training file...')
     conllu_train = conll.load_conllu(args.train_file)
-    sents_train = conllu_train.sents
+    sents_train = [sent.with_root() for sent in conllu_train.sents]
 
     if validation:
         log('Loading CoNLL-U validation file...')
         conllu_dev = conll.load_conllu(args.dev_file)
-        sents_dev = conllu_dev.sents
+        sents_dev = [sent.with_root() for sent in conllu_dev.sents]
 
     log('Loading embeddings file...')
     embeddings = utils.Embeddings.from_file(args.wordvec_file)
@@ -285,7 +285,7 @@ def main():
                     for line in f:
                         lines.append(line)
                 
-                checkpoint_prefix_current_match = re.match(r'^model_checkpoint_path\: \"([A-Za-z\-0-9]+)\"', lines[0])
+                checkpoint_prefix_current_match = re.match(r'^model_checkpoint_path\: \".*({}\-[0-9]+)\"'.format(checkpoint_prefix), lines[0])
                 checkpoint_prefix_current = checkpoint_prefix_current_match.groups()[0]
 
                 checkpoint_to_delete = (

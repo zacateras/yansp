@@ -2,14 +2,14 @@ import conll.conll18_ud_eval as conll
 from enum import Enum
 from utils.vocab import Vocab
 
-CHAR = 101
-WORD = 102
-FORM = conll.FORM
-LEMMA = conll.LEMMA
-UPOS = conll.UPOS
-XPOS = conll.XPOS
-FEATS = conll.FEATS
-DEPREL = conll.DEPREL
+CHAR = 'CHAR'
+WORD = 'WORD'
+FORM = 'FORM'
+LEMMA = 'LEMMA'
+UPOS = 'UPOS'
+XPOS = 'XPOS'
+FEATS = 'FEATS'
+DEPREL = 'DEPREL'
 
 def from_UDRepresentation(tb):
     flatten = lambda l: [item for sublist in l for item in sublist]

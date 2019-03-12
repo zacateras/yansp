@@ -155,22 +155,8 @@ class UDRoot(UDWord):
 class CoNLLWord(UDWord):
     def __init__(self, word):
         super(CoNLLWord, self).__init__(word.columns)
-
+        
         self._word = word
-
-        if word.is_multiword:
-            bounds = word.columns[ID].split('-')
-            self._start = int(bounds[0])
-            self._end = int(bounds[1])
-        else:
-            self._start = self._end = int(word.columns[ID])
-
-    @property
-    def is_multiword(self):
-        """
-        is_multiword==True means that this word is part of a multi-word token.
-        """
-        return self._word.is_multiword
 
 class UDSentence:
     def __init__(self, words: List[UDWord]):
@@ -192,29 +178,41 @@ class UDSentence:
     def words(self):
         return self._words
 
+    def with_root(self):
+        return UDSentence([UDRoot()] + self._words)
+
     @staticmethod  
     def from_UDRepresentation(tb):
+        sents = []
         last: int = 0
-        root = UDRoot()
-        words: List[UDWord] = [root]
+        words: List[UDWord] = []
 
         for word in tb.words:
             word = CoNLLWord(word)
 
             if word.id < last:
-                yield UDSentence(words)
-                words = [root]
+                sents.append(UDSentence(words))
+                words = []
             
             last = word.id
             words.append(word)
+
+        return sents
             
 class CoNLLFile:
-    def __init__(self, name, sents, vocabs, lang=None, tag=None):
+    def __init__(self, name, sents, vocabs, lang=None, tag=None, dataset_type=None):
         self._name = name
         self._sents = sents
         self._vocabs = vocabs
         self._lang = lang
         self._tag = tag
+        self._dataset_type = dataset_type
+
+    def __repr__(self):
+        return self.__str__()
+
+    def __str__(self):
+        return 'ud_treebank, {}, {}, {}'.format(self._lang, self._tag, self._dataset_type)
 
     @property
     def name(self):
@@ -236,6 +234,10 @@ class CoNLLFile:
     def tag(self):
         return self._tag
 
+    @property
+    def dataset_type(self):
+        return self._dataset_type
+
 def write_conllu(file, sents: List[UDSentence]):
     os.makedirs(os.path.dirname(file), exist_ok=True)
     with open(file, 'w+', encoding='utf-8') as f:
@@ -246,20 +248,20 @@ def write_conllu(file, sents: List[UDSentence]):
 
             f.write('\n')
 
-def load_conllu(file, is_path=True, name=None, lang=None, tag=None):
+def load_conllu(file, is_path=True, name=None, lang=None, tag=None, dataset_type=None):
     UDR = _just_load_conllu(file, is_path)
 
     if is_path:
         if name is None:
             name = os.path.basename(file)
 
-    if name is not None and lang is None and tag is None:
-        lang, tag = name.split('-')[0].split('_')
+            lang, tag = name.split('-')[0].split('_')
+            dataset_type = name.split('-')[2].split('.')[0]
 
     vocabs = conll.vocab.from_UDRepresentation(UDR)
     sents = UDSentence.from_UDRepresentation(UDR)
 
-    return CoNLLFile(name, sents, vocabs, lang=lang, tag=tag)
+    return CoNLLFile(name, sents, vocabs, lang=lang, tag=tag, dataset_type=dataset_type)
 
 def evaluate(gold_ud, system_ud):
     gold_ud = _just_load_conllu(gold_ud)
