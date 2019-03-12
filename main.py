@@ -1,6 +1,7 @@
 import argparse
 import time
 import os.path
+import re
 
 import tensorflow as tf
 import numpy as np
@@ -187,8 +188,8 @@ def main():
                 f.write('{}={}\n'.format(x[0], x[1]))
 
     log('Loading checkpoints...')
-    checkpoint_path = base_dir + '/checkpoints/'
     checkpoint_prefix = args.checkpoint_prefix
+    checkpoint_path = base_dir + '/checkpoints/'
     checkpoint = tf.train.Checkpoint(model=model, optimizer=optimizer, optimizer_step=tf.train.get_or_create_global_step())
     checkpoint.restore(tf.train.latest_checkpoint(checkpoint_path))
 
@@ -263,10 +264,20 @@ def main():
             checkpoint.save(checkpoint_path + checkpoint_prefix)
 
             if args.checkpoint_rolling:
-                checkpoint_files = sorted(x for x in os.listdir(checkpoint_path) if x.startswith(checkpoint_prefix))
-                checkpoint_files = checkpoint_files[:-2] # keep last checkpoint - *.index & *.data file
+                lines = []
+                with open(os.path.join(checkpoint_path, 'checkpoint')) as f:
+                    for line in f:
+                        lines.append(line)
+                
+                checkpoint_prefix_current_match = re.match(r'^model_checkpoint_path\: \"([A-Za-z\-0-9]+)\"', lines[0])
+                checkpoint_prefix_current = checkpoint_prefix_current_match.groups()[0]
 
-                for to_delete in checkpoint_files:
+                checkpoint_to_delete = (
+                    x for x in os.listdir(checkpoint_path) if (
+                        not x.startswith('checkpoint') and \
+                        not x.startswith(checkpoint_prefix_current)))
+
+                for to_delete in checkpoint_to_delete:
                     to_delete = os.path.join(checkpoint_path, to_delete)
                     log('Removing old checkpoint file {}...'.format(to_delete))
                     os.remove(to_delete)
