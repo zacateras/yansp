@@ -27,8 +27,11 @@ def parse_args():
 
     parser.add_argument('--epochs', type=int, default=20, help='Numer of epochs.')
     parser.add_argument('--epochs_early_stopping', type=int, default=5, help='Number of epochs w/o loss decrease required for early stopping.')
+    parser.add_argument('--checkpoint_rolling', type=bool, default=False, help='If flag is set to true, old checkpoints are deleted every time new one is created.')
+    parser.add_argument('--checkpoint_prefix', type=str, default='model', help='Prefix of checkpoint file names.')
     parser.add_argument('--batch_per_epoch', type=int, default=50, help='Number of batches per epoch.')
-    parser.add_argument('--batch_per_summary', type=int, default=1, help='Summary logs reporting interval.')
+    parser.add_argument('--batch_per_console_summary', type=int, default=1, help='Summary console logs reporting interval.')
+    parser.add_argument('--batch_per_file_summary', type=int, default=1, help='Summary file logs reporting interval.')
     parser.add_argument('--batch_size', type=int, default=1000, help='Size of batches (in words).')
     parser.add_argument('--batch_size_dev', type=int, default=None, help='Size of batches (in words) during validation phase. If None then whole file is used.')
     parser.add_argument('--batch_lenwise', type=bool, default=False, help='If true, sentences will be sorted and processed in length order')
@@ -185,6 +188,7 @@ def main():
 
     log('Loading checkpoints...')
     checkpoint_path = base_dir + '/checkpoints/'
+    checkpoint_prefix = args.checkpoint_prefix
     checkpoint = tf.train.Checkpoint(model=model, optimizer=optimizer, optimizer_step=tf.train.get_or_create_global_step())
     checkpoint.restore(tf.train.latest_checkpoint(checkpoint_path))
 
@@ -211,11 +215,11 @@ def main():
             optimizer.apply_gradients(zip(grads, model.trainable_variables), global_step=global_step)
 
             # log to console
-            if batch_i % args.batch_per_summary == 0:
+            if batch_i % args.batch_per_console_summary == 0:
                 log(losses)
 
             # log to file
-            with tf.contrib.summary.record_summaries_every_n_global_steps(args.batch_per_summary):
+            with tf.contrib.summary.record_summaries_every_n_global_steps(args.batch_per_file_summary):
                 for code, value in losses.items():
                     tf.contrib.summary.scalar('train_loss/{}'.format(code), value)
 
@@ -256,7 +260,16 @@ def main():
         if loss_total < loss_total_min:
             log('Saving checkpoint...')
             loss_total_min = loss_total
-            checkpoint.save(checkpoint_path + 'model')
+            checkpoint.save(checkpoint_path + checkpoint_prefix)
+
+            if args.checkpoint_rolling:
+                checkpoint_files = sorted(x for x in os.listdir(checkpoint_path) if x.startswith(checkpoint_prefix))
+                checkpoint_files = checkpoint_files[:-2] # keep last checkpoint - *.index & *.data file
+
+                for to_delete in checkpoint_files:
+                    to_delete = os.path.join(checkpoint_path, to_delete)
+                    log('Removing old checkpoint file {}...'.format(to_delete))
+                    os.remove(to_delete)
 
             epochs_early_stopping_counter = 0
         else:
