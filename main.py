@@ -41,6 +41,13 @@ def parse_args():
     parser.add_argument('--loss_cycle_n', type=int, default=3, help='Number of cycles to find.')
     parser.add_argument('--loss_weights', default=[0.2, 0.8, 0.05, 0.05, 0.2], help='Losses weights.')
 
+    parser.add_argument('--optimizer_lr', type=float, default=0.001, help='Optimizer learning rate.')
+    parser.add_argument('--optimizer_b1', type=float, default=0.9, help='Optimizer first-moment exponential decay rate (beta1).')
+    parser.add_argument('--optimizer_b2', type=float, default=0.999, help='Optimizer second-moment exponential decay rate (beta2).')
+    parser.add_argument('--optimizer_eps', type=float, default=1e-8, help='Optimizer epsilon.')
+
+    parser.add_argument('--signature_prefix', type=str, default=None, help='Custom model signature prefix.')
+    parser.add_argument('--signature_suffix', type=str, default=None, help='Custom model signature suffix.')
 
     parser.add_argument('--model_word_dense_size', type=int, default=100, help='Size of word model output dense layer.')
     parser.add_argument('--model_word_max_length', type=int, default=30, help='Maximum length of words.')
@@ -106,6 +113,11 @@ def model_signature_from_args(args):
 
     # model paramerization hash string
     h = utils.genkey(str(sorted(p, key=lambda x: x[0])))
+
+    if args.signature_prefix is not None:
+        pm.insert(0, args.signature_prefix)
+    if args.signature_suffix is not None:
+        pm.append(args.signature_suffix)
 
     return '.'.join(pm) + '-' + h, p
 
@@ -177,7 +189,11 @@ def main():
 
     log('Creating model & optimizer...')
     model = ParserModel(args, word_embeddings=embeddings, vocabs=conllu_train.vocabs)
-    optimizer = tf.train.AdamOptimizer(learning_rate=0.001, beta1=0.9, beta2=0.9, epsilon=1e-4)
+    optimizer = tf.train.AdamOptimizer(
+        learning_rate=args.optimizer_lr,
+        beta1=args.optimizer_b1,
+        beta2=args.optimizer_b2,
+        epsilon=args.optimizer_eps)
 
     log('Saving model parameters summary...')
     model_conf_file = os.path.join(base_dir, 'model.conf')
