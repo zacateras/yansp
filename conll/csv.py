@@ -36,6 +36,8 @@ def from_directory(csv_file=OUT_FILE, conllu_directory=IN_DIR):
             'misc',
 
             # statistics
+            'len_from',
+            'len_lemma'
             'vdist_to_head',
             'hdist_to_root'
         ])
@@ -68,7 +70,7 @@ def from_directory(csv_file=OUT_FILE, conllu_directory=IN_DIR):
                         sent_i,
                         token_i
 
-                    ] + token.columns + [vdist_to_head, hdist_to_root])
+                    ] + token.columns + [len(token.form), len(token.lemma), vdist_to_head, hdist_to_root])
 
                     token_i += 1
 
