@@ -10,6 +10,7 @@ import conll
 import utils
 
 from utils.generators import LenwiseBatchGenerator, RandomBatchGenerator, AllAtOnceBatchGenerator
+from parser.summary import summary_for_parser
 from parser.encoders import FeaturesEncoder
 from parser.models import ParserModel
 import parser.losses
@@ -121,6 +122,17 @@ def model_signature_from_args(args):
 
     return '.'.join(pm) + '-' + h, p
 
+def model_conf_save(file, model_conf, model_variables):
+    os.makedirs(os.path.dirname(file), exist_ok=True)
+    with open(file, 'w+') as f:
+        f.write('# configuration\n')
+        for x in model_conf:
+            f.write('{}={}\n'.format(x[0], x[1]))
+        
+        f.write('\n# variables\n')
+        for k, v in model_variables.items():
+            f.write('# {}={}\n'.format(k, v))
+
 def log(message):
     print('{} {}'.format(time.strftime("%Y-%m-%d %H:%M:%S"), message))
 
@@ -195,14 +207,6 @@ def main():
         beta2=args.optimizer_b2,
         epsilon=args.optimizer_eps)
 
-    log('Saving model parameters summary...')
-    model_conf_file = os.path.join(base_dir, 'model.conf')
-    if not os.path.exists(model_conf_file):
-        os.makedirs(os.path.dirname(model_conf_file), exist_ok=True)
-        with open(model_conf_file, 'w+') as f:
-            for x in model_conf:
-                f.write('{}={}\n'.format(x[0], x[1]))
-
     log('Loading checkpoints...')
     checkpoint_prefix = args.checkpoint_prefix
     checkpoint_path = base_dir + '/checkpoints/'
@@ -241,8 +245,13 @@ def main():
                     tf.contrib.summary.scalar('train_loss/{}'.format(code), value)
 
             # initialize with first step - new or checkpointed model
-            if 'loss_total_min' not in locals():       
+            if 'loss_total_min' not in locals():    
                 loss_total_min = loss_total
+
+                model_conf_file = os.path.join(base_dir, 'model.conf')
+                if not os.path.exists(model_conf_file):
+                    log('Saving model parameters summary...')
+                    model_conf_save(model_conf_file, model_conf, summary_for_parser(model))
 
         if validation:
             log('Validation {}/{}.'.format(epoch_i + 1, args.epochs))

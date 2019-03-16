@@ -7,38 +7,54 @@ class CharacterModel(keras.Model):
         embedding_dim: int,
         conv_layers: int,
         conv_size: int,
-        dense_size: int):
+        dense_size: int,
+        *args, **kwargs):
 
-        super(CharacterModel, self).__init__()
+        super(CharacterModel, self).__init__(*args, **kwargs)
 
-        self.embedding = keras.layers.Embedding(
-            input_dim=vocab_size,
-            output_dim=embedding_dim)
+        self.char_masking = keras.layers.Masking(mask_value=0)
 
-        self.conv = [
-            keras.layers.Conv1D(
-                filters=conv_size,
-                kernel_size=3,
-                strides=1,
-                dilation_rate=2 ** i,
-                activation=keras.activations.relu,
-                padding='same',
-                kernel_regularizer=keras.regularizers.l2(0.000001),
-                bias_regularizer=keras.regularizers.l2(0.000001)
-            )
-            for i in range(conv_layers)
-        ]
+        class CharacterCharModel(keras.Model):
+            def __init__(self, *args, **kwargs):
 
-        self.global_max_pooling = keras.layers.GlobalMaxPooling1D()
+                super(CharacterCharModel, self).__init__(*args, **kwargs)
 
-        self.dense = keras.layers.Dense(dense_size)
+                self.embedding = keras.layers.Embedding(
+                    input_dim=vocab_size,
+                    output_dim=embedding_dim)
+
+                self.conv = [
+                    keras.layers.Conv1D(
+                        filters=conv_size,
+                        kernel_size=3,
+                        strides=1,
+                        dilation_rate=2 ** i,
+                        activation=keras.activations.relu,
+                        padding='same',
+                        kernel_regularizer=keras.regularizers.l2(0.000001),
+                        bias_regularizer=keras.regularizers.l2(0.000001)
+                    )
+                    for i in range(conv_layers)
+                ]
+
+                self.global_max_pooling = keras.layers.GlobalMaxPooling1D()
+
+                self.dense = keras.layers.Dense(dense_size)
+
+            def call(self, inputs):
+                x = self.embedding(inputs)
+                
+                for conv in self.conv:
+                    x = conv(x)
+
+                x = self.global_max_pooling(x)
+
+                return x
+
+        self.char_model = keras.layers.TimeDistributed(CharacterCharModel())
 
     def call(self, inputs):
-        x = self.embedding(inputs)
-        
-        for conv in self.conv:
-            x = conv(x)
-
-        x = self.global_max_pooling(x)
+        x = self.char_masking(inputs)
+        x = self.char_model(inputs)
 
         return x

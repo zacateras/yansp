@@ -4,9 +4,10 @@ class HeadModel(keras.Model):
     def __init__(
         self,
         dense_size: int,
-        dropout: float):
+        dropout: float,
+        *args, **kwargs):
 
-        super(HeadModel, self).__init__()
+        super(HeadModel, self).__init__(*args, **kwargs)
 
         self.dependent_dense = keras.layers.Dense(
             units=dense_size,

@@ -13,9 +13,10 @@ class EncoderLayer(keras.Model):
         attention_dropout,
         pff_filter_size,
         pff_dropout,
-        layer_dropout):
+        layer_dropout,
+        *args, **kwargs):
 
-        super(EncoderLayer, self).__init__()
+        super(EncoderLayer, self).__init__(*args, **kwargs)
 
         self.mha = MultiHeadAttention(
             key_dense_size=attention_key_dense_size,

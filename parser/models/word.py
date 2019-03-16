@@ -6,9 +6,10 @@ class WordModel(keras.Model):
         self,
         embeddings: Embeddings,
         dense_size: int,
-        dropout: float):
+        dropout: float,
+        *args, **kwargs):
 
-        super(WordModel, self).__init__()
+        super(WordModel, self).__init__(*args, **kwargs)
 
         self.embedding = keras.layers.Embedding(
             input_dim=embeddings.size,

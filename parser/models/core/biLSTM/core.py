@@ -7,9 +7,10 @@ class Encoder(keras.Model):
         lstm_units: int,
         lstm_dropout: float,
         dropout: float,
-        noise: float):
+        noise: float,
+        *args, **kwargs):
 
-        super(Encoder, self).__init__()
+        super(Encoder, self).__init__(*args, **kwargs)
 
         self.biLSTM = [
             keras.layers.Bidirectional(

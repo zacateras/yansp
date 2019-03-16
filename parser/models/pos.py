@@ -5,9 +5,10 @@ class PosModel(keras.Model):
         self,
         pos_count: int,
         dense_size: int,
-        dropout: float):
+        dropout: float,
+        *args, **kwargs):
 
-        super(PosModel, self).__init__()
+        super(PosModel, self).__init__(*args, **kwargs)
 
         self.dense_hidden = keras.layers.Dense(
             units=dense_size,

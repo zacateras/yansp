@@ -10,9 +10,10 @@ class LayerNorm(keras.layers.Layer):
         gamma_initializer='ones',
         beta_initializer='zeros',
         gamma_regularizer=None,
-        beta_regularizer=None):
+        beta_regularizer=None,
+        *args, **kwargs):
 
-        super(LayerNorm, self).__init__()
+        super(LayerNorm, self).__init__(*args, **kwargs)
         self.eps = eps
         self.gamma_initializer = keras.initializers.get(gamma_initializer)
         self.beta_initializer = keras.initializers.get(beta_initializer)

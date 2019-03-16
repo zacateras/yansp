@@ -5,9 +5,10 @@ class DeprelModel(keras.Model):
         self,
         deprel_count: int,
         dense_size: int,
-        dropout: float):
+        dropout: float,
+        *args, **kwargs):
 
-        super(DeprelModel, self).__init__()
+        super(DeprelModel, self).__init__(*args, **kwargs)
 
         self.dependent_dense = keras.layers.Dense(
             units=dense_size,

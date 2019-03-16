@@ -10,9 +10,10 @@ class MultiHeadAttention(keras.Model):
         query_dense_size,
         output_dense_size,
         heads_count,
-        dropout):
+        dropout,
+        *args, **kwargs):
 
-        super(MultiHeadAttention, self).__init__()
+        super(MultiHeadAttention, self).__init__(*args, **kwargs)
 
         self.heads_count = heads_count
         self.query_scale = (key_dense_size // heads_count)**-0.5

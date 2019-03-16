@@ -10,9 +10,10 @@ class LemmaModel(keras.Model):
         conv_layers: int,
         conv_size: int,
         dense_size: int,
-        dropout: float):
+        dropout: float,
+        *args, **kwargs):
 
-        super(LemmaModel, self).__init__()
+        super(LemmaModel, self).__init__(*args, **kwargs)
 
         self.concat = keras.layers.Concatenate(axis=-1)
 

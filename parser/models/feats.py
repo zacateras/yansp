@@ -5,9 +5,10 @@ class FeatsModel(keras.Model):
         self,
         feats_count: int,
         dense_size: int,
-        dropout: float):
+        dropout: float,
+        *args, **kwargs):
 
-        super(FeatsModel, self).__init__()
+        super(FeatsModel, self).__init__(*args, **kwargs)
 
         self.dense_hidden = keras.layers.Dense(
             units=dense_size,

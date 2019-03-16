@@ -38,9 +38,10 @@ class Encoder(keras.Model):
         attention_dropout: float,
         pff_filter_size: int,
         pff_dropout: float,
-        layer_dropout: float):
+        layer_dropout: float,
+        *args, **kwargs):
 
-        super(Encoder, self).__init__()
+        super(Encoder, self).__init__(*args, **kwargs)
 
         self.input_dropout = keras.layers.Dropout(input_dropout)
         self.embedding_projection = keras.layers.Dense(hidden_size)
