@@ -33,7 +33,11 @@ def from_directory(csv_file=OUT_FILE, conllu_directory=IN_DIR):
             'head',
             'deprel',
             'deps',
-            'misc'
+            'misc',
+
+            # statistics
+            'vdist_to_head',
+            'hdist_to_root'
         ])
 
         treebank_i = 0
@@ -47,13 +51,24 @@ def from_directory(csv_file=OUT_FILE, conllu_directory=IN_DIR):
 
             for sent in treebank.sents:
                 for token in sent.words:
+
+                    vdist_to_head = abs(token.id - token.head)
+                    hdist_to_root = 0
+
+                    h = token.head
+                    while h != 0:
+                        h = sent[h - 1].head
+                        hdist_to_root += 1
+
                     writer.writerow([
                         treebank.lang,
                         treebank.tag,
                         treebank.dataset_type,
+
                         sent_i,
                         token_i
-                    ] + token.columns)
+
+                    ] + token.columns + [vdist_to_head, hdist_to_root])
 
                     token_i += 1
 

@@ -190,7 +190,7 @@ class UDSentence:
         for word in tb.words:
             word = CoNLLWord(word)
 
-            if word.id < last:
+            if word.id <= last:
                 sents.append(UDSentence(words))
                 words = []
             
