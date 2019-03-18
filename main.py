@@ -131,7 +131,7 @@ def model_conf_save(file, model_conf, model_variables):
         
         f.write('\n# variables\n')
         for k, v in model_variables.items():
-            f.write('# {}={}\n'.format(k, v))
+            f.write('{}={}\n'.format(k, v))
 
 def log(message):
     print('{} {}'.format(time.strftime("%Y-%m-%d %H:%M:%S"), message))

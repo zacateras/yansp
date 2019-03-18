@@ -5,14 +5,14 @@ import csv
 IN_DIR = 'tmp/ud-treebanks-v2.3'
 OUT_FILE = 'out/ud-treebanks-v2.3.csv'
 
-def iterate_conllu_recursive(conllu_directory=IN_DIR):
-    for root, dirs, files in os.walk(conllu_directory):
-        for file in files:
-            if file.endswith('.conllu'):
-                yield os.path.join(root, file)
+def create_analytical(csv_file=OUT_FILE, conllu_directory=IN_DIR):
+    def iterate_conllu_recursive():
+        for root, dirs, files in os.walk(conllu_directory):
+            for file in files:
+                if file.endswith('.conllu'):
+                    yield os.path.join(root, file)
 
-def from_directory(csv_file=OUT_FILE, conllu_directory=IN_DIR):
-    treebanks = list(iterate_conllu_recursive(conllu_directory))
+    treebanks = list(iterate_conllu_recursive())
 
     with open(csv_file, 'w+') as f:
         writer = csv.writer(f, delimiter='\t')
@@ -36,8 +36,8 @@ def from_directory(csv_file=OUT_FILE, conllu_directory=IN_DIR):
             'misc',
 
             # statistics
-            'len_from',
-            'len_lemma'
+            'len_form',
+            'len_lemma',
             'vdist_to_head',
             'hdist_to_root'
         ])
@@ -77,4 +77,6 @@ def from_directory(csv_file=OUT_FILE, conllu_directory=IN_DIR):
                 sent_i += 1
                 
             treebank_i += 1
-                
+
+def create_validation(csv_file, validation_directory):
+    pass
