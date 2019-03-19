@@ -71,14 +71,16 @@ class BaseSentVocabEncoder(BaseSentEncoder):
 
         # numpy type ranges:
         # https://docs.scipy.org/doc/numpy-1.13.0/user/basics.types.html
+        #
+        # uint16,32,64 are not supported by TF, so that int16,32,64 are used instead
         if vocab.size < 256:
             self.dtype = np.uint8
-        elif vocab.size < 65536:
-            self.dtype = np.uint16
-        elif vocab.size < 4294967296:
-            self.dtype = np.uint32
+        elif vocab.size < 32768:
+            self.dtype = np.int16
+        elif vocab.size < 2147483647:
+            self.dtype = np.int32
         else:
-            self.dtype = np.uint64
+            self.dtype = np.int64
 
     def _to_onehot(self, source):
         return keras.utils.to_categorical(

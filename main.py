@@ -35,8 +35,8 @@ def parse_args():
     parser.add_argument('--batch_per_console_summary', type=int, default=1, help='Summary console logs reporting interval.')
     parser.add_argument('--batch_per_file_summary', type=int, default=1, help='Summary file logs reporting interval.')
     parser.add_argument('--batch_size', type=int, default=1000, help='Size of batches (in words).')
-    parser.add_argument('--batch_size_dev', type=int, default=None, help='Size of batches (in words) during validation phase. If None then whole file is used.')
     parser.add_argument('--batch_lenwise', type=bool, default=False, help='If true, sentences will be sorted and processed in length order')
+    parser.add_argument('--batch_dev_limit', type=int, default=None, help='Maximum size of batch (in words) during validation phase. If None then whole file is used, otherwise at most `batch_dev_limit` leading tokens.')
 
     parser.add_argument('--loss_cycle_weight', type=float, default=1.0, help='Relative weight of cycle loss.')
     parser.add_argument('--loss_cycle_n', type=int, default=3, help='Number of cycles to find.')
@@ -194,9 +194,7 @@ def main():
 
     if validation:
         log('Creating dev generator...')
-        generator_dev = RandomBatchGenerator(sents_dev, args.batch_size_dev) \
-                        if args.batch_size_dev is not None else \
-                        AllAtOnceBatchGenerator(sents_dev)
+        generator_dev = AllAtOnceBatchGenerator(sents_dev, args.batch_dev_limit)
         generator_dev = map(encoder.encode_batch, generator_dev)
 
     log('Creating model & optimizer...')

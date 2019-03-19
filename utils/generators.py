@@ -73,8 +73,8 @@ class RandomBatchGenerator(BatchGenerator):
             yield x[i]
 
 class AllAtOnceBatchGenerator(BatchGenerator):
-    def __init__(self, items):
-        super(AllAtOnceBatchGenerator, self).__init__(items, sys.maxsize)
+    def __init__(self, items, limit=sys.maxsize):
+        super(AllAtOnceBatchGenerator, self).__init__(items, limit)
 
         # just one batch
         self.batch = next(self._iterate_batches(self.items, self.batch_size))
