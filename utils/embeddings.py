@@ -41,12 +41,12 @@ class Embeddings:
 
             return Embeddings(size, dim, vocab, vectors)
 
-        f = gzip.open(filename, mode='rt', encoding=encoding) \
-            if filename.endswith('.gz') else \
-            open(filename, mode='rt', encoding=encoding)
+        with gzip.open(filename, mode='rt', encoding=encoding, errors='ignore') \
+             if filename.endswith('.gz') else \
+             open(filename, mode='rt', encoding=encoding, errors='ignore') as f:
 
-        # header of a file specifies size of a dictionary and dimension of word embedding
-        size, dim = map(int, f.readline().strip().split())
-        size = size + len(VOCAB_PREFIX)
+            # header of a file specifies size of a dictionary and dimension of word embedding
+            size, dim = map(int, f.readline().strip().split())
+            size = size + len(VOCAB_PREFIX)
 
-        return _with_vectors(f, size, dim) if load_vectors else _without_vectors(f, size, dim)
+            return _with_vectors(f, size, dim) if load_vectors else _without_vectors(f, size, dim)
