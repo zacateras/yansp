@@ -9,7 +9,7 @@ import numpy as np
 import conll
 import utils
 
-from utils.generators import LenwiseBatchGenerator, RandomBatchGenerator, AllAtOnceBatchGenerator
+from utils.generators import LenwiseBatchGenerator, RandomBatchGenerator, OneshotBatchGenerator
 from parser.summary import summary_for_parser
 from parser.encoders import FeaturesEncoder
 from parser.models import ParserModel
@@ -36,7 +36,8 @@ def parse_args():
     parser.add_argument('--batch_per_file_summary', type=int, default=1, help='Summary file logs reporting interval.')
     parser.add_argument('--batch_size', type=int, default=1000, help='Size of batches (in words).')
     parser.add_argument('--batch_lenwise', type=bool, default=False, help='If true, sentences will be sorted and processed in length order')
-    parser.add_argument('--batch_dev_limit', type=int, default=None, help='Maximum size of batch (in words) during validation phase. If None then whole file is used, otherwise at most `batch_dev_limit` leading tokens.')
+    parser.add_argument('--batch_size_dev', type=int, default=None, help='Size of batches (in words) during validation phase. If None then whole file is used.')
+    parser.add_argument('--batch_limit_dev', type=int, default=None, help='Maximum size (in words) of validation data. If None then whole file is used.')
 
     parser.add_argument('--loss_cycle_weight', type=float, default=1.0, help='Relative weight of cycle loss.')
     parser.add_argument('--loss_cycle_n', type=int, default=3, help='Number of cycles to find.')
@@ -192,11 +193,6 @@ def main():
                       RandomBatchGenerator(sents_train, args.batch_size)
     generator_train = map(encoder.encode_batch, generator_train)
 
-    if validation:
-        log('Creating dev generator...')
-        generator_dev = AllAtOnceBatchGenerator(sents_dev, args.batch_dev_limit)
-        generator_dev = map(encoder.encode_batch, generator_dev)
-
     log('Creating model & optimizer...')
     model = ParserModel(args, word_embeddings=embeddings, vocabs=conllu_train.vocabs)
     optimizer = tf.train.AdamOptimizer(
@@ -253,15 +249,36 @@ def main():
 
         if validation:
             log('Validation {}/{}.'.format(epoch_i + 1, args.epochs))
-            batch_dev = next(generator_dev)
-            loss_total, losses, y = step.on(batch_dev)
+
+            generator_dev = OneshotBatchGenerator(sents_dev, args.batch_size_dev, args.batch_limit_dev)
+            generator_dev = map(encoder.encode_batch, generator_dev)
+
+            loss_total = []
+            losses = dict()
+            sents_dev_gold = []
+            sents_dev_system = []
+
+            for batch_dev in generator_dev:
+                loss_total_batch, losses_batch, y = step.on(batch_dev)
+
+                loss_total.append(loss_total_batch)
+                for loss_batch_key, loss_batch_value in losses_batch.items():
+                    if loss_batch_key in losses:
+                        losses[loss_batch_key].append(loss_batch_value)
+                    else:
+                        losses[loss_batch_key] = [loss_batch_value]
+
+                sents_dev_gold = sents_dev_gold + encoder.decode_batch(batch_dev)
+                sents_dev_system = sents_dev_system + encoder.decode_batch(batch_dev, y)
+
+            loss_total = np.average(loss_total)
+            for loss_key in losses.keys():
+                losses[loss_key] = np.average(losses[loss_key])
 
             file_gold = base_dir + '/validation/{}_gold.conllu'.format(epoch_i)
-            sents_dev_gold = encoder.decode_batch(batch_dev)
             conll.write_conllu(file_gold, sents_dev_gold)
 
             file_system = base_dir + '/validation/{}_system.conllu'.format(epoch_i)
-            sents_dev_system = encoder.decode_batch(batch_dev, y)
             conll.write_conllu(file_system, sents_dev_system)
 
             summaries = dict()

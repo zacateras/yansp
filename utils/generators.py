@@ -72,13 +72,22 @@ class RandomBatchGenerator(BatchGenerator):
             i = random.randint(0, len(x) - 1)
             yield x[i]
 
-class AllAtOnceBatchGenerator(BatchGenerator):
-    def __init__(self, items, limit=sys.maxsize):
-        super(AllAtOnceBatchGenerator, self).__init__(items, limit)
+class OneshotBatchGenerator(BatchGenerator):
+    def __init__(self, items, batch_size, limit=sys.maxsize, item_length_batching=True):
+        super(OneshotBatchGenerator, self).__init__(items, batch_size)
 
-        # just one batch
-        self.batch = next(self._iterate_batches(self.items, self.batch_size))
+        self.item_length_batching = item_length_batching
+        self.remaining = limit
+        self.batches = self._iterate_batches(self.items, self.batch_size)
 
     def __next__(self):
-        while True:
-            return self.batch
+        for batch in self.batches:
+            if self.remaining <= 0:
+                raise StopIteration
+
+            if self.item_length_batching:
+                self.remaining -= sum(len(item) for item in batch)
+            else:
+                self.remaining -= len(batch)
+            
+            return batch
