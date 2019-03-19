@@ -18,7 +18,7 @@
                 "--train_file", "tmp/ud-treebanks-v2.3/UD_Polish-LFG/pl_lfg-ud-train.conllu",
                 "--dev_file", "tmp/ud-treebanks-v2.3/UD_Polish-LFG/pl_lfg-ud-dev.conllu",
                 "--test_file", "tmp/ud-treebanks-v2.3/UD_Polish-LFG/pl_lfg-ud-test.conllu",
-                "--save_dir", "out/biLSTM",
+                "--save_dir", "out",
                 
                 "--epochs", "1000",
                 "--batch_per_epoch", "2",
@@ -39,11 +39,38 @@
                 "--train_file", "tmp/ud-treebanks-v2.3/UD_Polish-LFG/pl_lfg-ud-train.conllu",
                 "--dev_file", "tmp/ud-treebanks-v2.3/UD_Polish-LFG/pl_lfg-ud-dev.conllu",
                 "--test_file", "tmp/ud-treebanks-v2.3/UD_Polish-LFG/pl_lfg-ud-test.conllu",
-                "--save_dir", "out/transformer",
+                "--save_dir", "out",
                 
                 "--epochs", "1000",
-                "--batch_per_epoch", "50",
+                "--checkpoint_rolling", "True",
+                "--batch_per_epoch", "2",
                 "--model_core_type", "transformer"
+            ]
+        },
+        {
+            "name": "Train Transformer model (Spanish).",
+            "type": "python",
+            "request": "launch",
+            "program": "${workspaceFolder}/main.py",
+            "console": "integratedTerminal",
+            "pythonPath": "${workspaceFolder}/.venv3.7/bin/python",
+            "args": [
+                "--mode", "train",
+                "--lang", "es",
+                "--signature_prefix", "es_gsd",
+                "--wordvec_file", "tmp/ft/cc.es.300.vec.500.top",
+                "--train_file", "tmp/ud-treebanks-v2.3/UD_Spanish-GSD/es_gsd-ud-train.conllu",
+                "--dev_file", "tmp/ud-treebanks-v2.3/UD_Spanish-GSD/es_gsd-ud-dev.conllu",
+                "--test_file", "tmp/ud-treebanks-v2.3/UD_Spanish-GSD/es_gsd-ud-test.conllu",
+                "--save_dir", "out",
+                
+                "--epochs", "1000",
+                "--checkpoint_rolling", "True",
+                "--batch_per_epoch", "2",
+                "--batch_dev_limit", "5000",
+                "--model_word_max_length", "60",
+                "--model_core_type", "transformer",
+                "--model_core_transformer_sent_max_length", "200"
             ]
         }
     ]
