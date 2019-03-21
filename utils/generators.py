@@ -91,3 +91,5 @@ class OneshotBatchGenerator(BatchGenerator):
                 self.remaining -= len(batch)
             
             return batch
+
+        raise StopIteration
