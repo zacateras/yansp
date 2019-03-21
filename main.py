@@ -93,7 +93,7 @@ def model_signature_from_args(args):
     args_vars = vars(args)
 
     # model parametrization properties
-    p = (x for x in zip(args_vars.keys(), args_vars.values()) if x[0].startswith('model_'))
+    p = (x for x in zip(args_vars.keys(), args_vars.values()))
 
     # model meaningful parametrization properties
     pm = [args.model_core_type]
