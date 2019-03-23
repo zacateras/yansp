@@ -239,8 +239,7 @@ def main():
                     tf.contrib.summary.scalar('train_loss/{}'.format(code), value)
 
             # initialize with first step - new or checkpointed model
-            if 'loss_total_min' not in locals():    
-                loss_total_min = loss_total
+            if 'model_conf_file' not in locals():
 
                 model_conf_file = os.path.join(base_dir, 'model.conf')
                 if not os.path.exists(model_conf_file):
@@ -298,9 +297,12 @@ def main():
                     tf.contrib.summary.scalar(code_dev, value_dev)
 
         # save checkpoint
-        if loss_total < loss_total_min:
+        if 'loss_total_min_dev' not in locals():
+            loss_total_min_dev = loss_total_dev
+
+        if loss_total_dev <= loss_total_min_dev:
             log('Saving checkpoint...')
-            loss_total_min = loss_total
+            loss_total_min_dev = loss_total_dev
             checkpoint.save(checkpoint_path + checkpoint_prefix)
 
             if args.checkpoint_rolling:
@@ -327,7 +329,7 @@ def main():
             epochs_early_stopping_counter += 1
 
             if epochs_early_stopping_counter >= args.epochs_early_stopping:
-                log('Total loss did not decrease from {} steps. Stopping.'.format(epochs_early_stopping_counter))
+                log('DEV total loss did not decrease from {} steps. Stopping.'.format(epochs_early_stopping_counter))
                 break
 
     log('Finished training.')
