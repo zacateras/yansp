@@ -41,7 +41,7 @@ def parse_args():
 
     parser.add_argument('--loss_cycle_weight', type=float, default=1.0, help='Relative weight of cycle loss.')
     parser.add_argument('--loss_cycle_n', type=int, default=3, help='Number of cycles to find.')
-    parser.add_argument('--loss_weights', default=[0.2, 0.8, 0.05, 0.05, 0.2], help='Losses weights.')
+    parser.add_argument('--loss_weights', default=[0.25, 0.5, 0.1, 0.2, 0.25], help='Losses weights.')
 
     parser.add_argument('--optimizer_lr', type=float, default=0.001, help='Optimizer learning rate.')
     parser.add_argument('--optimizer_b1', type=float, default=0.9, help='Optimizer first-moment exponential decay rate (beta1).')
@@ -253,49 +253,49 @@ def main():
             generator_dev = OneshotBatchGenerator(sents_dev, args.batch_size_dev, args.batch_limit_dev)
             generator_dev = map(encoder.encode_batch, generator_dev)
 
-            loss_total = []
-            losses = dict()
-            sents_dev_gold = []
-            sents_dev_system = []
+            loss_total_dev = []
+            losses_dev = dict()
+            sents_gold_dev = []
+            sents_system_dev = []
 
             for batch_dev in generator_dev:
-                loss_total_batch, losses_batch, y = step.on(batch_dev)
+                loss_total_batch_dev, losses_batch_dev, y_dev = step.on(batch_dev)
 
-                loss_total.append(loss_total_batch)
-                for loss_batch_key, loss_batch_value in losses_batch.items():
-                    if loss_batch_key in losses:
-                        losses[loss_batch_key].append(loss_batch_value)
+                loss_total_dev.append(loss_total_batch_dev)
+                for loss_batch_key_dev, loss_batch_value_dev in losses_batch_dev.items():
+                    if loss_batch_key_dev in losses_dev:
+                        losses_dev[loss_batch_key_dev].append(loss_batch_value_dev)
                     else:
-                        losses[loss_batch_key] = [loss_batch_value]
+                        losses_dev[loss_batch_key_dev] = [loss_batch_value_dev]
 
-                sents_dev_gold = sents_dev_gold + encoder.decode_batch(batch_dev)
-                sents_dev_system = sents_dev_system + encoder.decode_batch(batch_dev, y)
+                sents_gold_dev = sents_gold_dev + encoder.decode_batch(batch_dev)
+                sents_system_dev = sents_system_dev + encoder.decode_batch(batch_dev, y_dev)
 
-            loss_total = np.average(loss_total)
-            for loss_key in losses.keys():
-                losses[loss_key] = np.average(losses[loss_key])
+            loss_total_dev = np.average(loss_total_dev)
+            for loss_key_dev in losses_dev.keys():
+                losses_dev[loss_key_dev] = np.average(losses_dev[loss_key_dev])
 
-            file_gold = base_dir + '/validation/{}_gold.conllu'.format(epoch_i)
-            conll.write_conllu(file_gold, sents_dev_gold)
+            file_gold_dev = base_dir + '/validation/{}_gold.conllu'.format(epoch_i)
+            conll.write_conllu(file_gold_dev, sents_gold_dev)
 
-            file_system = base_dir + '/validation/{}_system.conllu'.format(epoch_i)
-            conll.write_conllu(file_system, sents_dev_system)
+            file_system_dev = base_dir + '/validation/{}_system.conllu'.format(epoch_i)
+            conll.write_conllu(file_system_dev, sents_system_dev)
 
-            summaries = dict()
+            summaries_dev = dict()
 
-            for code, loss in losses.items():
-                summaries['dev_loss/{}'.format(code)] = loss
+            for code_dev, loss_dev in losses_dev.items():
+                summaries_dev['dev_loss/{}'.format(code_dev)] = loss_dev
 
-            for code, score in parser.scores.y.items():
-                score = score(sents_dev_gold, sents_dev_system)
-                summaries['dev_score/{}'.format(code)] = score
+            for code_dev, score_dev in parser.scores.y.items():
+                score_dev = score_dev(sents_gold_dev, sents_system_dev)
+                summaries_dev['dev_score/{}'.format(code_dev)] = score_dev
 
-            for code, score in conll.evaluate(file_gold, file_system).items():
-                summaries['dev_conll/{}/f1'.format(code)] = score.f1
+            for code_dev, score_dev in conll.evaluate(file_gold_dev, file_system_dev).items():
+                summaries_dev['dev_conll/{}/f1'.format(code_dev)] = score_dev.f1
 
             with tf.contrib.summary.always_record_summaries():
-                for code, value in summaries.items():
-                    tf.contrib.summary.scalar(code, value)
+                for code_dev, value_dev in summaries_dev.items():
+                    tf.contrib.summary.scalar(code_dev, value_dev)
 
         # save checkpoint
         if loss_total < loss_total_min:
