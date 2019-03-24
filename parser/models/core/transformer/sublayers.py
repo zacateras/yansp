@@ -92,21 +92,29 @@ class MultiHeadAttention(keras.Model):
 class PositionwiseFeedForward(keras.Model):
     def __init__(
         self,
-        hidden_dense_size=2048,
-        output_dense_size=512,
-        dropout=0.1):
+        hidden_layers=2,
+        hidden_dense_size=256,
+        output_dense_size=128,
+        dropout=0.2):
         super(PositionwiseFeedForward, self).__init__()
 
-        self.hidden_dense = keras.layers.Dense(hidden_dense_size)
-        self.output_dense = keras.layers.Dense(output_dense_size)
+        self.hidden_layers = hidden_layers
+        self.dense_layers = []
+
+        for size in [hidden_dense_size for x in range(hidden_layers)] + [output_dense_size]:
+            self.dense_layers.append(keras.layers.Dense(size))
+
         self.relu = keras.layers.ReLU()
         self.dropout = keras.layers.Dropout(dropout)
 
     def call(self, x):
-        x = self.hidden_dense(x)
-        x = self.relu(x)
-        x = self.dropout(x)
-        x = self.output_dense(x)
+
+        for i, layer in enumerate(self.dense_layers):
+            x = layer(x)
+
+            if i < self.hidden_layers:
+                x = self.relu(x)
+                x = self.dropout(x)
 
         return x
 

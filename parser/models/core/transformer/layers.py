@@ -11,6 +11,7 @@ class EncoderLayer(keras.Model):
         attention_query_dense_size,
         attention_heads_count,
         attention_dropout,
+        pff_layers,
         pff_filter_size,
         pff_dropout,
         layer_dropout,
@@ -28,6 +29,7 @@ class EncoderLayer(keras.Model):
         self.mha_connection = AddAndNorm(layer_dropout)
 
         self.pff = PositionwiseFeedForward(
+            hidden_layers=pff_layers,
             hidden_dense_size=pff_filter_size,
             output_dense_size=hidden_size,
             dropout=pff_dropout)

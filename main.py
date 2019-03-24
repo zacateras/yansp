@@ -72,7 +72,8 @@ def parse_args():
     parser.add_argument('--model_core_transformer_attention_key_dense_size', type=int, default=20, help='Size of attention key sublayers\' dense layer in core transformer model.')
     parser.add_argument('--model_core_transformer_attention_query_dense_size', type=int, default=20, help='Size of attention query sublayers\' dense layer in core transformer model.')
     parser.add_argument('--model_core_transformer_attention_dropout', type=float, default=0.2, help='Dropout rate applied to each attention sublayer in core transformer model.')
-    parser.add_argument('--model_core_transformer_pff_filter_size', type=int, default=3, help='Size of filter for positional feed-forward sublayer in core transformer model.')
+    parser.add_argument('--model_core_transformer_pff_layers', type=int, default=2, help='Number of layers for positional feed-forward sublayer in core transformer model.')
+    parser.add_argument('--model_core_transformer_pff_filter_size', type=int, default=32, help='Size of filter for positional feed-forward sublayer in core transformer model.')
     parser.add_argument('--model_core_transformer_pff_dropout', type=float, default=0.2, help='Dropout rate applied to each positional feed-forward sublayer in core transformer model.')
     parser.add_argument('--model_core_transformer_layer_dropout', type=float, default=0.2, help='Dropout rate applied to each encoder layer in core transformer model.')
 

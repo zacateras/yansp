@@ -71,6 +71,7 @@ class ParserModel(keras.Model):
                 attention_query_dense_size=params.model_core_transformer_attention_query_dense_size,
                 attention_heads=params.model_core_transformer_attention_heads,
                 attention_dropout=params.model_core_transformer_attention_dropout,
+                pff_layers=params.model_core_transformer_pff_layers,
                 pff_filter_size=params.model_core_transformer_pff_filter_size,
                 pff_dropout=params.model_core_transformer_pff_dropout,
                 layer_dropout=params.model_core_transformer_layer_dropout,

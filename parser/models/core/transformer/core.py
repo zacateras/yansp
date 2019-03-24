@@ -36,6 +36,7 @@ class Encoder(keras.Model):
         attention_query_dense_size: int,
         attention_heads: int,
         attention_dropout: float,
+        pff_layers: int,
         pff_filter_size: int,
         pff_dropout: float,
         layer_dropout: float,
@@ -54,6 +55,7 @@ class Encoder(keras.Model):
                 attention_query_dense_size,
                 attention_heads,
                 attention_dropout,
+                pff_layers,
                 pff_filter_size,
                 pff_dropout,
                 layer_dropout) \
