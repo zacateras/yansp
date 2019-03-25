@@ -56,7 +56,6 @@ def parse_args():
     parser.add_argument('--model_char_embedding_dim', type=int, default=100, help='Dimension of character level embeddings.')
     parser.add_argument('--model_char_conv_layers', type=int, default=3, help='Number of convolution layers in character model.')
     parser.add_argument('--model_char_conv_size', type=int, default=30, help='Size of character model convolution layers.')
-    parser.add_argument('--model_char_dense_size', type=int, default=100, help='Size of character model output dense layer.')
 
     parser.add_argument('--model_core_type', default='transformer', type=str, choices=['transformer', 'biLSTM'], help='Type of core model used (either transformer or biLSTM).')
     parser.add_argument('--model_core_bilstm_layers', type=int, default=2, help='Numer of LSTM layers in biLSTM core model.')
@@ -70,7 +69,7 @@ def parse_args():
     parser.add_argument('--model_core_transformer_layers', type=int, default=3, help='Number of encoder layers in core transformer model.')
     parser.add_argument('--model_core_transformer_attention_heads', type=int, default=10, help='Number of heads of multi-head attention layer in core transformer model.')
     parser.add_argument('--model_core_transformer_attention_key_dense_size', type=int, default=20, help='Size of attention key sublayers\' dense layer in core transformer model.')
-    parser.add_argument('--model_core_transformer_attention_query_dense_size', type=int, default=20, help='Size of attention query sublayers\' dense layer in core transformer model.')
+    parser.add_argument('--model_core_transformer_attention_value_dense_size', type=int, default=20, help='Size of attention query sublayers\' dense layer in core transformer model.')
     parser.add_argument('--model_core_transformer_attention_dropout', type=float, default=0.2, help='Dropout rate applied to each attention sublayer in core transformer model.')
     parser.add_argument('--model_core_transformer_pff_layers', type=int, default=2, help='Number of layers for positional feed-forward sublayer in core transformer model.')
     parser.add_argument('--model_core_transformer_pff_filter_size', type=int, default=32, help='Size of filter for positional feed-forward sublayer in core transformer model.')
@@ -104,7 +103,7 @@ def model_signature_from_args(args):
         pm.append(str(args.model_core_transformer_hidden_size))
         pm.append('ah' + str(args.model_core_transformer_attention_heads))
         pm.append('ak' + str(args.model_core_transformer_attention_key_dense_size))
-        pm.append('aq' + str(args.model_core_transformer_attention_query_dense_size))
+        pm.append('av' + str(args.model_core_transformer_attention_value_dense_size))
         p = (x for x in p if not (x[0].startswith('model_core') and not x[0].startswith('model_core_transformer')))
 
     elif args.model_core_type == 'biLSTM':

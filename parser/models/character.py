@@ -7,7 +7,6 @@ class CharacterModel(keras.Model):
         embedding_dim: int,
         conv_layers: int,
         conv_size: int,
-        dense_size: int,
         *args, **kwargs):
 
         super(CharacterModel, self).__init__(*args, **kwargs)
@@ -38,8 +37,6 @@ class CharacterModel(keras.Model):
                 ]
 
                 self.global_max_pooling = keras.layers.GlobalMaxPooling1D()
-
-                self.dense = keras.layers.Dense(dense_size)
 
             def call(self, inputs):
                 x = self.embedding(inputs)

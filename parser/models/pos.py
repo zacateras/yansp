@@ -23,8 +23,7 @@ class PosModel(keras.Model):
         self.dropout = keras.layers.Dropout(dropout)
 
         self.softmax = keras.layers.Activation(
-            activation=keras.activations.softmax,
-            name='pos',
+            activation=keras.activations.softmax
         )
 
     def call(self, inputs):

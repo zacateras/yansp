@@ -23,8 +23,7 @@ class HeadModel(keras.Model):
 
         self.dot = keras.layers.Dot(axes=2)
         self.softmax = keras.layers.Activation(
-            activation=keras.activations.softmax,
-            name='head',
+            activation=keras.activations.softmax
         )
 
     def call(self, inputs):

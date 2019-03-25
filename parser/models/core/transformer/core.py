@@ -33,7 +33,7 @@ class Encoder(keras.Model):
         max_length: int,
         layers: int,
         attention_key_dense_size: int,
-        attention_query_dense_size: int,
+        attention_value_dense_size: int,
         attention_heads: int,
         attention_dropout: float,
         pff_layers: int,
@@ -52,7 +52,7 @@ class Encoder(keras.Model):
             EncoderLayer(
                 hidden_size,
                 attention_key_dense_size,
-                attention_query_dense_size,
+                attention_value_dense_size,
                 attention_heads,
                 attention_dropout,
                 pff_layers,

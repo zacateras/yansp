@@ -8,7 +8,7 @@ class EncoderLayer(keras.Model):
         self,
         hidden_size,
         attention_key_dense_size,
-        attention_query_dense_size,
+        attention_value_dense_size,
         attention_heads_count,
         attention_dropout,
         pff_layers,
@@ -21,7 +21,7 @@ class EncoderLayer(keras.Model):
 
         self.mha = MultiHeadAttention(
             key_dense_size=attention_key_dense_size,
-            query_dense_size=attention_query_dense_size,
+            value_dense_size=attention_value_dense_size,
             output_dense_size=hidden_size,
             heads_count=attention_heads_count,
             dropout=attention_dropout)
@@ -60,7 +60,7 @@ class DecoderLayer(keras.Model):
 
         self.mha_dec = MultiHeadAttention(
             key_dense_size=attention_key_dense_size,
-            query_dense_size=attention_query_dense_size,
+            value_dense_size=attention_query_dense_size,
             output_dense_size=hidden_size,
             heads_count=attention_heads_count,
             dropout=attention_dropout)
@@ -69,7 +69,7 @@ class DecoderLayer(keras.Model):
 
         self.mha_enc_dec = MultiHeadAttention(
             key_dense_size=attention_key_dense_size,
-            query_dense_size=attention_query_dense_size,
+            value_dense_size=attention_query_dense_size,
             output_dense_size=hidden_size,
             heads_count=attention_heads_count,
             dropout=attention_dropout)

@@ -7,7 +7,7 @@ class MultiHeadAttention(keras.Model):
     def __init__(
         self,
         key_dense_size,
-        query_dense_size,
+        value_dense_size,
         output_dense_size,
         heads_count,
         dropout,
@@ -20,7 +20,7 @@ class MultiHeadAttention(keras.Model):
 
         self.query_dense = keras.layers.Dense(key_dense_size)
         self.key_dense = keras.layers.Dense(key_dense_size)
-        self.value_dense = keras.layers.Dense(query_dense_size)
+        self.value_dense = keras.layers.Dense(value_dense_size)
         self.output_dense = keras.layers.Dense(output_dense_size)
 
         self.softmax = keras.layers.Softmax()

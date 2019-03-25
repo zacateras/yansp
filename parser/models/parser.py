@@ -44,7 +44,6 @@ class ParserModel(keras.Model):
             embedding_dim=params.model_char_embedding_dim,
             conv_layers=params.model_char_conv_layers,
             conv_size=params.model_char_conv_size,
-            dense_size=params.model_char_dense_size,
             name='char'
         )
 
@@ -68,7 +67,7 @@ class ParserModel(keras.Model):
                 max_length=params.model_core_transformer_sent_max_length,
                 layers=params.model_core_transformer_layers,
                 attention_key_dense_size=params.model_core_transformer_attention_key_dense_size,
-                attention_query_dense_size=params.model_core_transformer_attention_query_dense_size,
+                attention_value_dense_size=params.model_core_transformer_attention_value_dense_size,
                 attention_heads=params.model_core_transformer_attention_heads,
                 attention_dropout=params.model_core_transformer_attention_dropout,
                 pff_layers=params.model_core_transformer_pff_layers,
