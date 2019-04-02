@@ -89,10 +89,7 @@ class LemmaModel(keras.Model):
 
         self.char_model = keras.layers.TimeDistributed(LemmaCharModel())
 
-    def call(self, inputs_core, inputs_char):
-
-        core = inputs_core
-        char = tf.dtypes.cast(inputs_char, tf.float32)
+    def call(self, core, char):
 
         x = self.concat([char, core])
 

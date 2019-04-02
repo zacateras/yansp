@@ -51,6 +51,7 @@ def parse_args():
     parser.add_argument('--signature_prefix', type=str, default=None, help='Custom model signature prefix.')
     parser.add_argument('--signature_suffix', type=str, default=None, help='Custom model signature suffix.')
 
+    parser.add_argument('--model_inputs', default=['word', 'char'], help='Used feature types.')
     parser.add_argument('--model_word_dense_size', type=int, default=100, help='Size of word model output dense layer.')
     parser.add_argument('--model_word_max_length', type=int, default=30, help='Maximum length of words.')
     parser.add_argument('--model_char_embedding_dim', type=int, default=100, help='Dimension of character level embeddings.')
@@ -63,7 +64,9 @@ def parse_args():
     parser.add_argument('--model_core_bilstm_layer_dropout', type=float, default=0.2, help='Dropout rate applied to LSTM layers in biLSTM core model.')
     parser.add_argument('--model_core_bilstm_dropout', type=float, default=0.25, help='GaussianDropout rate applied between biLSTM layers in biLSTM core model.')
     parser.add_argument('--model_core_bilstm_noise', type=float, default=0.2, help='GaussianNoise rate applied between biLSTM layers in biLSTM core model.')
-    parser.add_argument('--model_core_transformer_input_dropout', type=float, default=0.2, help='Dropout rate applied to input of transformer core model')
+    parser.add_argument('--model_core_transformer_input_dropout', type=float, default=0.2, help='Dropout rate applied to input of transformer core model.')
+    parser.add_argument('--model_core_transformer_use_embedding_projection', type=bool, default=True, help='Flag enabling internal embedding projection layer.')
+    parser.add_argument('--model_core_transformer_use_timing_signal', type=bool, default=True, help='Flag enabling timing signal component.')
     parser.add_argument('--model_core_transformer_hidden_size', type=int, default=32, help='Sublayer hidden size in transformer core model.')
     parser.add_argument('--model_core_transformer_sent_max_length', type=int, default=75, help='Assumed maximum lenght of sentence used to generate positional signal in transformer core model.')
     parser.add_argument('--model_core_transformer_layers', type=int, default=3, help='Number of encoder layers in core transformer model.')
@@ -76,6 +79,7 @@ def parse_args():
     parser.add_argument('--model_core_transformer_pff_dropout', type=float, default=0.2, help='Dropout rate applied to each positional feed-forward sublayer in core transformer model.')
     parser.add_argument('--model_core_transformer_layer_dropout', type=float, default=0.2, help='Dropout rate applied to each encoder layer in core transformer model.')
 
+    parser.add_argument('--model_outputs', default=['lemma', 'upos', 'feats', 'head', 'deprel'])
     parser.add_argument('--model_head_dense_size', type=int, default=100, help='Size of head model hidden dense size.')
     parser.add_argument('--model_deprel_dense_size', type=int, default=100, help='Size of deprel model hidden dense size.')
     parser.add_argument('--model_upos_dense_size', type=int, default=100, help='Size of UPOS model hidden dense size.')

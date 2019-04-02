@@ -1,4 +1,5 @@
 import keras
+import tensorflow as tf
 import conll
 
 from .word import WordModel
@@ -32,20 +33,22 @@ class ParserModel(keras.Model):
 
         #
         # inputs
-        self.word_model = WordModel(
-            embeddings=word_embeddings,
-            dense_size=params.model_word_dense_size,
-            dropout=params.model_dropout,
-            name='word'
-        )
+        if 'word' in params.model_inputs:
+            self.word_model = WordModel(
+                embeddings=word_embeddings,
+                dense_size=params.model_word_dense_size,
+                dropout=params.model_dropout,
+                name='word'
+            )
 
-        self.char_model = CharacterModel(
-            vocab_size=char_vocab.size,
-            embedding_dim=params.model_char_embedding_dim,
-            conv_layers=params.model_char_conv_layers,
-            conv_size=params.model_char_conv_size,
-            name='char'
-        )
+        if 'char' in params.model_inputs:
+            self.char_model = CharacterModel(
+                vocab_size=char_vocab.size,
+                embedding_dim=params.model_char_embedding_dim,
+                conv_layers=params.model_char_conv_layers,
+                conv_size=params.model_char_conv_size,
+                name='char'
+            )
 
         self.concat = keras.layers.Concatenate(axis=-1)
 
@@ -63,6 +66,8 @@ class ParserModel(keras.Model):
         elif params.model_core_type == 'transformer':
             self.core_model = transformer.Encoder(
                 input_dropout=params.model_core_transformer_input_dropout,
+                use_embedding_projection=params.model_core_transformer_use_embedding_projection,
+                use_timing_signal=params.model_core_transformer_use_timing_signal,
                 hidden_size=params.model_core_transformer_hidden_size,
                 max_length=params.model_core_transformer_sent_max_length,
                 layers=params.model_core_transformer_layers,
@@ -121,13 +126,20 @@ class ParserModel(keras.Model):
 
     def call(self, inputs):
 
-        word_inp = inputs[F.FORM]
-        word = self.word_model(word_inp)
+        word_inp = tf.dtypes.cast(inputs[F.FORM], tf.float32)
+        char_inp = tf.dtypes.cast(inputs[F.FORM_CHAR], tf.float32)
 
-        char_inp = inputs[F.FORM_CHAR]
-        char = self.char_model(char_inp)
+        x = []
 
-        x = self.concat([word, char])
+        if hasattr(self, 'word_model'):
+            word = self.word_model(word_inp)
+            x.append(word)
+        
+        if hasattr(self, 'char_model'):
+            char = self.char_model(char_inp)
+            x.append(char)
+
+        x = self.concat(x) if len(x) > 1 else x[0]
 
         x = self.core_model(x)
 
