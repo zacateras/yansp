@@ -19,16 +19,22 @@ class WordModel(keras.Model):
             trainable=False
         )
 
-        self.dense = keras.layers.Dense(
-            units=dense_size,
-            activation=keras.activations.tanh
-        )
+        if dense_size is not None:
+            self.dense = keras.layers.Dense(
+                units=dense_size,
+                activation=keras.activations.tanh
+            )
 
-        self.dropout = keras.layers.Dropout(dropout)
+        if dropout is not None:
+            self.dropout = keras.layers.Dropout(dropout)
 
     def call(self, inputs):
         x = self.embedding(inputs)
-        x = self.dense(x)
-        x = self.dropout(x)
+
+        if hasattr(self, 'dense'):
+            x = self.dense(x)
+
+        if hasattr(self, 'dropout'):    
+            x = self.dropout(x)
 
         return x

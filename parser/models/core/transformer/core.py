@@ -29,7 +29,6 @@ class Encoder(keras.Model):
     def __init__(
         self,
         input_dropout: float,
-        use_embedding_projection: bool,
         use_timing_signal: bool,
         hidden_size: int,
         max_length: int,
@@ -47,6 +46,10 @@ class Encoder(keras.Model):
         super(Encoder, self).__init__(*args, **kwargs)
 
         self.input_dropout = keras.layers.Dropout(input_dropout)
+        self.embedding_projection = keras.layers.Dense(hidden_size)
+
+        self.use_timing_signal = use_timing_signal
+        self.max_length = max_length
 
         self.enc_all = [
             EncoderLayer(
@@ -64,18 +67,9 @@ class Encoder(keras.Model):
 
         self.norm = LayerNorm()
 
-        self.use_embedding_projection = use_embedding_projection
-        self.use_timing_signal = use_timing_signal
-        self.max_length = max_length
-
-        if use_embedding_projection:
-            self.embedding_projection = keras.layers.Dense(hidden_size)
-
     def call(self, inputs):
         x = self.input_dropout(inputs)
-
-        if self.use_embedding_projection:
-            x = self.embedding_projection(x)
+        x = self.embedding_projection(x)
 
         if self.use_timing_signal:
             self.timing_signal = _gen_timing_signal(self.max_length, x.shape[-1].value)

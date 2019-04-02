@@ -66,7 +66,6 @@ class ParserModel(keras.Model):
         elif params.model_core_type == 'transformer':
             self.core_model = transformer.Encoder(
                 input_dropout=params.model_core_transformer_input_dropout,
-                use_embedding_projection=params.model_core_transformer_use_embedding_projection,
                 use_timing_signal=params.model_core_transformer_use_timing_signal,
                 hidden_size=params.model_core_transformer_hidden_size,
                 max_length=params.model_core_transformer_sent_max_length,

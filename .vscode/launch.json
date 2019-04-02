@@ -44,7 +44,9 @@
                 "--epochs", "1000",
                 "--checkpoint_rolling", "True",
                 "--batch_per_epoch", "2",
-                "--model_core_type", "transformer"
+                "--model_inputs", "word", "none",
+                "--model_core_type", "transformer",
+                "--model_word_dense_size", "None",
             ]
         },
         {
@@ -71,7 +73,7 @@
                 "--batch_limit_dev", "5000",
                 "--model_word_max_length", "60",
                 "--model_core_type", "transformer",
-                "--model_core_transformer_sent_max_length", "200"
+                "--model_core_transformer_sent_max_length", "200",
             ]
         }
     ]

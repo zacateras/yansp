@@ -36,7 +36,7 @@ def parse_args():
     parser.add_argument('--batch_per_file_summary', type=int, default=1, help='Summary file logs reporting interval.')
     parser.add_argument('--batch_size', type=int, default=1000, help='Size of batches (in words).')
     parser.add_argument('--batch_lenwise', type=str2bool, default=False, help='If true, sentences will be sorted and processed in length order')
-    parser.add_argument('--batch_size_dev', type=int, default=None, help='Size of batches (in words) during validation phase. If None then whole file is used.')
+    parser.add_argument('--batch_size_dev', type=int, default=1000, help='Size of batches (in words) during validation phase. If None then whole file is used.')
     parser.add_argument('--batch_limit_dev', type=int, default=None, help='Maximum size (in words) of validation data. If None then whole file is used.')
 
     parser.add_argument('--loss_cycle_weight', type=float, default=1.0, help='Relative weight of cycle loss.')
@@ -51,8 +51,8 @@ def parse_args():
     parser.add_argument('--signature_prefix', type=str, default=None, help='Custom model signature prefix.')
     parser.add_argument('--signature_suffix', type=str, default=None, help='Custom model signature suffix.')
 
-    parser.add_argument('--model_inputs', default=['word', 'char'], help='Used feature types.')
-    parser.add_argument('--model_word_dense_size', type=int, default=100, help='Size of word model output dense layer.')
+    parser.add_argument('--model_inputs', nargs='+', default=['word', 'char'], help='Used input (also features) types.')
+    parser.add_argument('--model_word_dense_size', type=str2int, default=100, help='Size of word model output dense layer. If `none` then no layer is used.')
     parser.add_argument('--model_word_max_length', type=int, default=30, help='Maximum length of words.')
     parser.add_argument('--model_char_embedding_dim', type=int, default=100, help='Dimension of character level embeddings.')
     parser.add_argument('--model_char_conv_layers', type=int, default=3, help='Number of convolution layers in character model.')
@@ -79,7 +79,7 @@ def parse_args():
     parser.add_argument('--model_core_transformer_pff_dropout', type=float, default=0.2, help='Dropout rate applied to each positional feed-forward sublayer in core transformer model.')
     parser.add_argument('--model_core_transformer_layer_dropout', type=float, default=0.2, help='Dropout rate applied to each encoder layer in core transformer model.')
 
-    parser.add_argument('--model_outputs', default=['lemma', 'upos', 'feats', 'head', 'deprel'])
+    parser.add_argument('--model_outputs', nargs='+', default=['lemma', 'upos', 'feats', 'head', 'deprel'], help='Used output (also losses) types.')
     parser.add_argument('--model_head_dense_size', type=int, default=100, help='Size of head model hidden dense size.')
     parser.add_argument('--model_deprel_dense_size', type=int, default=100, help='Size of deprel model hidden dense size.')
     parser.add_argument('--model_upos_dense_size', type=int, default=100, help='Size of UPOS model hidden dense size.')
@@ -92,6 +92,14 @@ def parse_args():
 
     args = parser.parse_args()
     return args
+
+def str2int(v):
+    if v.lower() in ('none'):
+        return None
+    elif v.lower().isdigit():
+        return int(v)
+    else:
+        raise argparse.ArgumentTypeError('Integer value expected.')
 
 def str2bool(v):
     if v.lower() in ('yes', 'true', 't', 'y', '1'):

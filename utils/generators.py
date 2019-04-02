@@ -77,7 +77,7 @@ class OneshotBatchGenerator(BatchGenerator):
         super(OneshotBatchGenerator, self).__init__(items, batch_size)
 
         self.item_length_batching = item_length_batching
-        self.remaining = limit
+        self.remaining = limit if limit is not None else sys.maxsize
         self.batches = self._iterate_batches(self.items, self.batch_size)
 
     def __next__(self):
