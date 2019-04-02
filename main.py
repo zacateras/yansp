@@ -29,13 +29,13 @@ def parse_args():
 
     parser.add_argument('--epochs', type=int, default=20, help='Numer of epochs.')
     parser.add_argument('--epochs_early_stopping', type=int, default=5, help='Number of epochs w/o loss decrease required for early stopping.')
-    parser.add_argument('--checkpoint_rolling', type=bool, default=False, help='If flag is set to true, old checkpoints are deleted every time new one is created.')
+    parser.add_argument('--checkpoint_rolling', type=str2bool, default=False, help='If flag is set to true, old checkpoints are deleted every time new one is created.')
     parser.add_argument('--checkpoint_prefix', type=str, default='model', help='Prefix of checkpoint file names.')
     parser.add_argument('--batch_per_epoch', type=int, default=50, help='Number of batches per epoch.')
     parser.add_argument('--batch_per_console_summary', type=int, default=1, help='Summary console logs reporting interval.')
     parser.add_argument('--batch_per_file_summary', type=int, default=1, help='Summary file logs reporting interval.')
     parser.add_argument('--batch_size', type=int, default=1000, help='Size of batches (in words).')
-    parser.add_argument('--batch_lenwise', type=bool, default=False, help='If true, sentences will be sorted and processed in length order')
+    parser.add_argument('--batch_lenwise', type=str2bool, default=False, help='If true, sentences will be sorted and processed in length order')
     parser.add_argument('--batch_size_dev', type=int, default=None, help='Size of batches (in words) during validation phase. If None then whole file is used.')
     parser.add_argument('--batch_limit_dev', type=int, default=None, help='Maximum size (in words) of validation data. If None then whole file is used.')
 
@@ -65,8 +65,8 @@ def parse_args():
     parser.add_argument('--model_core_bilstm_dropout', type=float, default=0.25, help='GaussianDropout rate applied between biLSTM layers in biLSTM core model.')
     parser.add_argument('--model_core_bilstm_noise', type=float, default=0.2, help='GaussianNoise rate applied between biLSTM layers in biLSTM core model.')
     parser.add_argument('--model_core_transformer_input_dropout', type=float, default=0.2, help='Dropout rate applied to input of transformer core model.')
-    parser.add_argument('--model_core_transformer_use_embedding_projection', type=bool, default=True, help='Flag enabling internal embedding projection layer.')
-    parser.add_argument('--model_core_transformer_use_timing_signal', type=bool, default=True, help='Flag enabling timing signal component.')
+    parser.add_argument('--model_core_transformer_use_embedding_projection', type=str2bool, default=True, help='Flag enabling internal embedding projection layer.')
+    parser.add_argument('--model_core_transformer_use_timing_signal', type=str2bool, default=True, help='Flag enabling timing signal component.')
     parser.add_argument('--model_core_transformer_hidden_size', type=int, default=32, help='Sublayer hidden size in transformer core model.')
     parser.add_argument('--model_core_transformer_sent_max_length', type=int, default=75, help='Assumed maximum lenght of sentence used to generate positional signal in transformer core model.')
     parser.add_argument('--model_core_transformer_layers', type=int, default=3, help='Number of encoder layers in core transformer model.')
@@ -92,6 +92,14 @@ def parse_args():
 
     args = parser.parse_args()
     return args
+
+def str2bool(v):
+    if v.lower() in ('yes', 'true', 't', 'y', '1'):
+        return True
+    elif v.lower() in ('no', 'false', 'f', 'n', '0'):
+        return False
+    else:
+        raise argparse.ArgumentTypeError('Boolean value expected.')
 
 def model_signature_from_args(args):
     args_vars = vars(args)
