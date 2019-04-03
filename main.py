@@ -316,6 +316,8 @@ def main():
                 for code_dev, value_dev in summaries_dev.items():
                     tf.contrib.summary.scalar(code_dev, value_dev)
 
+            log(summaries_dev)
+
         # save checkpoint
         if 'loss_total_min_dev' not in locals():
             loss_total_min_dev = loss_total_dev
