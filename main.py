@@ -83,7 +83,6 @@ def parse_args():
     parser.add_argument('--model_head_dense_size', type=int, default=100, help='Size of head model hidden dense size.')
     parser.add_argument('--model_deprel_dense_size', type=int, default=100, help='Size of deprel model hidden dense size.')
     parser.add_argument('--model_upos_dense_size', type=int, default=100, help='Size of UPOS model hidden dense size.')
-    parser.add_argument('--model_feats_max_length', type=int, default=100, help='Maximum length of features.')
     parser.add_argument('--model_feats_dense_size', type=int, default=100, help='Size of feats model hidden dense size.')
     parser.add_argument('--model_lemma_dense_size', type=int, default=25, help='Size of lemma model hidden dense size.')
 
