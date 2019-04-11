@@ -309,8 +309,6 @@ def main():
                 summaries_dev['dev_score/{}'.format(code_dev)] = score_dev
 
             for code_dev, score_dev in conll.evaluate(file_gold_dev, file_system_dev).items():
-                summaries_dev['dev_conll/{}/precision'.format(code_dev)] = score_dev.precision
-                summaries_dev['dev_conll/{}/recall'.format(code_dev)] = score_dev.recall
                 summaries_dev['dev_conll/{}/f1'.format(code_dev)] = score_dev.f1
 
             with tf.contrib.summary.always_record_summaries():
