@@ -9,6 +9,7 @@ rm tmp/ngrok-stable-linux-amd64.zip
 tensorboard --logdir ${1:-tmp/out} --host 0.0.0.0 --port 6006 &
 
 if [ ! -z $2 ]; then ./tmp/ngrok authtoken $2; fi
-./tmp/ngrok http 6006 &
+./tmp/ngrok http 6006 > /dev/null &
 
-curl -s http://localhost:4040/api/tunnels
+curl -s http://localhost:4040/api/tunnels | \
+    python3 -c "import sys, json; print(json.load(sys.stdin)['tunnels'][0]['public_url'])"
