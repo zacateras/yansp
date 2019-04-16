@@ -19,25 +19,30 @@ python main.py \
   --batch_size_dev 2000 \
   --batch_limit_dev "${batch_limit_dev}" \
   --batch_per_console_summary 50 \
+  --model_inputs char word \
   --model_word_dense_size None \
   --model_word_max_length "${word_max_length}" \
-  --model_char_embedding_dim 60 \
-  --model_char_conv_layers 3 \
-  --model_char_conv_size 30 \
+  --model_char_embedding_dim 100 \
+  --model_char_conv_layers 4 \
+  --model_char_conv_size 200 \
   --model_core_type transformer \
   \
-  --model_core_transformer_hidden_size 256 \
+  --model_core_transformer_input_dropout 0.2 \
+  --model_core_transformer_hidden_size 512 \
   --model_core_transformer_use_timing_signal True \
   --model_core_transformer_sent_max_length "${sent_max_length}" \
   --model_core_transformer_layers 3 \
-  --model_core_transformer_attention_key_dense_size 128 \
-  --model_core_transformer_attention_value_dense_size 128 \
-  --model_core_transformer_attention_heads 16 \
-  --model_core_transformer_pff_layers 2 \
+  --model_core_transformer_attention_key_dense_size 256 \
+  --model_core_transformer_attention_value_dense_size 256 \
+  --model_core_transformer_attention_heads 32 \
+  --model_core_transformer_attention_dropout 0.2 \
+  --model_core_transformer_pff_layers 3 \
   --model_core_transformer_pff_filter_size 256 \
+  --model_core_transformer_pff_dropout 0.2 \
+  --model_core_transformer_layer_dropout 0.2 \
   \
-  --model_core_bilstm_layers 3 \
-  --model_core_bilstm_layer_size 64 \
+  --model_core_bilstm_layers 2 \
+  --model_core_bilstm_layer_size 512 \
   --model_core_bilstm_noise 0.2 \
   --model_core_bilstm_layer_dropout 0.2 \
   --model_core_bilstm_dropout 0.2 \
