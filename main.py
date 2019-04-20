@@ -192,16 +192,19 @@ def main():
     conllu_train = conll.load_conllu(args.train_file)
     sents_train = [sent.with_root() for sent in conllu_train.sents]
 
+    vocabs = conllu_train.vocabs
+
     if validation:
         log('Loading CoNLL-U validation file...')
         conllu_dev = conll.load_conllu(args.dev_file)
         sents_dev = [sent.with_root() for sent in conllu_dev.sents]
 
-    log('Loading embeddings file...')
-    embeddings = utils.Embeddings.from_file(args.wordvec_file)
-
-    vocabs = conllu_train.vocabs
-    vocabs[conll.vocab.WORD] = embeddings.vocab
+    if 'word' in args.model_inputs:
+        log('Loading embeddings file...')
+        embeddings = utils.Embeddings.from_file(args.wordvec_file)
+        vocabs[conll.vocab.WORD] = embeddings.vocab
+    else:
+        embeddings = []
 
     log('Creating encoder...')
     encoder = FeaturesEncoder(vocabs, args)

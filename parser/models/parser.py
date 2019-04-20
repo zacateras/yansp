@@ -125,14 +125,14 @@ class ParserModel(keras.Model):
 
     def call(self, inputs):
 
-        word_inp = tf.dtypes.cast(inputs[F.FORM], tf.float32)
-        char_inp = tf.dtypes.cast(inputs[F.FORM_CHAR], tf.float32)
-
         x = []
 
         if hasattr(self, 'word_model'):
+            word_inp = tf.dtypes.cast(inputs[F.FORM], tf.float32)
             word = self.word_model(word_inp)
             x.append(word)
+        
+        char_inp = tf.dtypes.cast(inputs[F.FORM_CHAR], tf.float32)
         
         if hasattr(self, 'char_model'):
             char = self.char_model(char_inp)

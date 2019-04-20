@@ -90,7 +90,8 @@ class FeaturesEncoder:
     def __init__(self, vocabs, args, x_feats = F.X, y_feats = F.Y):
         _ = dict()
 
-        _[F.FORM] = SentVocabEncoder(lambda w: w.form, vocabs[conll.vocab.WORD])
+        if conll.vocab.WORD in vocabs:
+            _[F.FORM] = SentVocabEncoder(lambda w: w.form, vocabs[conll.vocab.WORD])
         _[F.FORM_CHAR] = SentIterVocabEncoder(lambda w: w.form, vocabs[conll.vocab.CHAR], args.model_word_max_length)
         _[F.LEMMA_CHAR] = SentIterVocabEncoder(lambda w: w.lemma, vocabs[conll.vocab.CHAR], args.model_word_max_length, onehot=True)
         _[F.UPOS] = SentVocabEncoder(lambda w: w.upos, vocabs[conll.vocab.UPOS], onehot=True)
@@ -98,8 +99,8 @@ class FeaturesEncoder:
         _[F.FEATS] = FeatsSentEncoder(vocabs[conll.vocab.FEATS])
         _[F.HEAD] = HeadSentEncoder(onehot=True)
 
-        self.x_encoders = [(f, _[f]) for f in x_feats]
-        self.y_encoders = [(f, _[f]) for f in y_feats]
+        self.x_encoders = [(f, _[f]) for f in x_feats if f in _]
+        self.y_encoders = [(f, _[f]) for f in y_feats if f in _]
 
     def encode_batch(self, sents):
         return Batch(
