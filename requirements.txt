@@ -1,2 +1,2 @@
-tensorflow==1.13.0rc1
+tensorflow==1.13.1
 StringDist==1.0.9
