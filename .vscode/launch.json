@@ -33,8 +33,7 @@
             "console": "integratedTerminal",
             "pythonPath": "${workspaceFolder}/.venv3.7/bin/python",
             "args": [
-                "--mode", "train",
-                "--lang", "pl",
+                "train",
                 "--wordvec_file", "tmp/ft/cc.pl.300.vec.500.top",
                 "--train_file", "tmp/ud-treebanks-v2.3/UD_Polish-LFG/pl_lfg-ud-train.conllu",
                 "--dev_file", "tmp/ud-treebanks-v2.3/UD_Polish-LFG/pl_lfg-ud-dev.conllu",
@@ -44,9 +43,41 @@
                 "--epochs", "1000",
                 "--checkpoint_rolling", "True",
                 "--batch_per_epoch", "2",
-                "--model_inputs", "word", "none",
+                "--model_inputs", "char", "none",
                 "--model_core_type", "transformer",
                 "--model_word_dense_size", "None",
+            ]
+        },
+        {
+            "name": "Retrain Transformer model.",
+            "type": "python",
+            "request": "launch",
+            "program": "${workspaceFolder}/main.py",
+            "console": "integratedTerminal",
+            "pythonPath": "${workspaceFolder}/.venv3.7/bin/python",
+            "args": [
+                "retrain",
+                "--model_dir", "out/transformer.3.32.ah10.ak20.av20-80161331",
+                "--train_file", "tmp/ud-treebanks-v2.3/UD_Polish-LFG/pl_lfg-ud-train.conllu",
+                "--dev_file", "tmp/ud-treebanks-v2.3/UD_Polish-LFG/pl_lfg-ud-dev.conllu",
+                "--test_file", "tmp/ud-treebanks-v2.3/UD_Polish-LFG/pl_lfg-ud-test.conllu",
+                
+                "--epochs", "1000",
+                "--checkpoint_rolling", "True",
+                "--batch_per_epoch", "2"
+            ]
+        },
+        {
+            "name": "Evaluate Transformer model.",
+            "type": "python",
+            "request": "launch",
+            "program": "${workspaceFolder}/main.py",
+            "console": "integratedTerminal",
+            "pythonPath": "${workspaceFolder}/.venv3.7/bin/python",
+            "args": [
+                "evaluate",
+                "--model_dir", "out/transformer.3.32.ah10.ak20.av20-80161331",
+                "--conllu_file", "tmp/ud-treebanks-v2.3/UD_Polish-LFG/pl_lfg-ud-test.conllu",
             ]
         },
         {
@@ -57,8 +88,7 @@
             "console": "integratedTerminal",
             "pythonPath": "${workspaceFolder}/.venv3.7/bin/python",
             "args": [
-                "--mode", "train",
-                "--lang", "es",
+                "train",
                 "--signature_prefix", "es_gsd",
                 "--wordvec_file", "tmp/ft/cc.es.300.vec.500.top",
                 "--train_file", "tmp/ud-treebanks-v2.3/UD_Spanish-GSD/es_gsd-ud-train.conllu",

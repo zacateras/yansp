@@ -4,8 +4,7 @@
 lang='pl'; tb_name='Polish-LFG'; tb_tag='pl_lfg'; word_max_length=45; sent_max_length=35; batch_limit_dev=999999999;
 
 python main.py \
-  --lang "${lang}" \
-  --mode 'train' \
+  train \
   --signature_prefix "${tb_tag}.ft" \
   --wordvec_file "tmp/ft/cc.${lang}.300.vec.gz" \
   --train_file "tmp/ud-treebanks-v2.3/UD_${tb_name}/${tb_tag}-ud-train.conllu" \

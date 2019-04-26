@@ -87,13 +87,13 @@ class FeatsSentEncoder(BaseSentEncoder):
         return enc
 
 class FeaturesEncoder:
-    def __init__(self, vocabs, args, x_feats = F.X, y_feats = F.Y):
+    def __init__(self, vocabs, params, x_feats = F.X, y_feats = F.Y):
         _ = dict()
 
         if conll.vocab.WORD in vocabs:
             _[F.FORM] = SentVocabEncoder(lambda w: w.form, vocabs[conll.vocab.WORD])
-        _[F.FORM_CHAR] = SentIterVocabEncoder(lambda w: w.form, vocabs[conll.vocab.CHAR], args.model_word_max_length)
-        _[F.LEMMA_CHAR] = SentIterVocabEncoder(lambda w: w.lemma, vocabs[conll.vocab.CHAR], args.model_word_max_length, onehot=True)
+        _[F.FORM_CHAR] = SentIterVocabEncoder(lambda w: w.form, vocabs[conll.vocab.CHAR], params['model_word_max_length'])
+        _[F.LEMMA_CHAR] = SentIterVocabEncoder(lambda w: w.lemma, vocabs[conll.vocab.CHAR], params['model_word_max_length'], onehot=True)
         _[F.UPOS] = SentVocabEncoder(lambda w: w.upos, vocabs[conll.vocab.UPOS], onehot=True)
         _[F.DEPREL] = SentVocabEncoder(lambda w: w.deprel, vocabs[conll.vocab.DEPREL], onehot=True)
         _[F.FEATS] = FeatsSentEncoder(vocabs[conll.vocab.FEATS])

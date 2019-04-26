@@ -57,10 +57,10 @@ class CategoricalCrossentropyFromLogitsLoss:
 
         return loss
 
-y = lambda args: {
+y = lambda params: {
     F.LEMMA_CHAR: CategoricalCrossentropyLoss(),
     F.UPOS: CategoricalCrossentropyLoss(),
     F.FEATS: CategoricalCrossentropyFromLogitsLoss(),
-    F.HEAD: HeadLoss(args.loss_cycle_weight, args.loss_cycle_n, args.batch_size),
+    F.HEAD: HeadLoss(params['loss_cycle_weight'], params['loss_cycle_n'], params['batch_size']),
     F.DEPREL: CategoricalCrossentropyLoss(),
 }

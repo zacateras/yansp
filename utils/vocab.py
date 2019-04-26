@@ -1,5 +1,8 @@
 from collections import Counter
 
+import os
+import pickle
+
 PAD = '<PAD>'
 PAD_ID = 0
 UNK = '<UNK>'
@@ -66,3 +69,22 @@ class Vocab:
         item2id = dict(zip(itemList, idList))
 
         return Vocab(item2id, item2cnt)
+
+    @staticmethod
+    def ensure_saved(base_dir, obj):
+        file = os.path.join(base_dir, 'vocab')
+        if not os.path.exists(file):
+            os.makedirs(os.path.dirname(file), exist_ok=True)
+            with open(file, 'wb+') as f:
+                pickle.dump(obj, f)
+
+    @staticmethod
+    def load(base_dir, default=None):
+        file = os.path.join(base_dir, 'vocab')
+        if os.path.exists(file):
+            with open(file, 'rb') as f:
+                return pickle.load(f)
+        elif default is not None:
+            return default
+        else:
+            raise RuntimeError('Vocabulary file was not found in {}.'.format(base_dir))
