@@ -1,6 +1,7 @@
 import keras
 import tensorflow as tf
 import conll
+import numpy as np
 
 from .word import WordModel
 from .character import CharacterModel
@@ -21,6 +22,7 @@ class ParserModel(keras.Model):
         self,
         params,
         vocabs,
+        has_checkpoint=False,
         *args, **kwargs):
 
         super(ParserModel, self).__init__(*args, **kwargs)
@@ -28,12 +30,17 @@ class ParserModel(keras.Model):
         #
         # inputs
         if 'word' in params['model_inputs']:
-            log('Loading embeddings file...')
-            embeddings = Embeddings.from_file(params['wordvec_file'])
-            vocabs[conll.vocab.WORD] = embeddings.vocab
+            if not has_checkpoint:
+                log('Loading embeddings file...')
+                embeddings = Embeddings.from_file(params['wordvec_file'])
+                vectors = embeddings.vectors
+                vocabs[conll.vocab.WORD] = embeddings.vocab
+            else:
+                embeddings = Embeddings.from_file(params['wordvec_file'], load_vectors=False)
+                vectors = np.zeros((embeddings.size, embeddings.dim))
 
             self.word_model = WordModel(
-                embeddings_weights=embeddings.vectors,
+                embeddings_weights=vectors,
                 embeddings_size=embeddings.size,
                 embeddings_dim=embeddings.dim,
                 dense_size=params['model_word_dense_size'],

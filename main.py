@@ -128,24 +128,28 @@ def parse_args():
     return args
 
 def build(params, vocabs):
-    log('Creating model & optimizer...')
-    model = ParserModel(params, vocabs=vocabs)
+    log('Building model...')
+    checkpoint_prefix = params['checkpoint_prefix']
+    checkpoint_path = params['base_dir'] + '/checkpoints/'
+    checkpoint_latest = tf.train.latest_checkpoint(checkpoint_path)
+
+    model = ParserModel(params, vocabs=vocabs, has_checkpoint=(checkpoint_latest is not None))
     optimizer = tf.train.AdamOptimizer(
         learning_rate=params['optimizer_lr'],
         beta1=params['optimizer_b1'],
         beta2=params['optimizer_b2'],
         epsilon=params['optimizer_eps'])
 
-    log('Loading checkpoints...')
-    checkpoint_prefix = params['checkpoint_prefix']
-    checkpoint_path = params['base_dir'] + '/checkpoints/'
     checkpoint = tf.train.Checkpoint(model=model, optimizer=optimizer, optimizer_step=tf.train.get_or_create_global_step())
-    checkpoint.restore(tf.train.latest_checkpoint(checkpoint_path))
+
+    if checkpoint_latest is not None:
+        log('Loading checkpoints...')
+        checkpoint.restore(checkpoint_latest)
 
     log('Creating encoder...')
     encoder = FeaturesEncoder(vocabs, params)
 
-    return model, optimizer, encoder, checkpoint, checkpoint_path, checkpoint_prefix
+    return model, optimizer, encoder, checkpoint, checkpoint_path, checkpoint_prefix, checkpoint_latest
 
 class Step:
     def __init__(self, model, losses, weights):
@@ -184,7 +188,7 @@ def train(params):
     log('Loading vocabs...')
     vocabs = utils.Vocab.load(params['base_dir'], default=conllu_train.vocabs)
 
-    model, optimizer, encoder, checkpoint, checkpoint_path, checkpoint_prefix = build(params, vocabs)
+    model, optimizer, encoder, checkpoint, checkpoint_path, checkpoint_prefix, checkpoint_latest = build(params, vocabs)
 
     log('Creating train generator...')
     generator_train = LenwiseBatchGenerator(sents_train, params['batch_size']) \
@@ -224,11 +228,12 @@ def train(params):
                 for code, value in losses.items():
                     tf.contrib.summary.scalar('train_loss/{}'.format(code), value)
 
-            # initialize with first step - new or checkpointed model
-            if 'initialized' not in locals():
+            # initialize with first step
+            if checkpoint_latest is None and 'initialized' not in locals():
                 log('Saving model configuration...')
                 conf.ensure_saved(params, model)
                 utils.Vocab.ensure_saved(params['base_dir'], vocabs)
+                checkpoint.save(checkpoint_path + checkpoint_prefix)
                 initialized = True
 
         if validation:
@@ -329,7 +334,7 @@ def evaluate(params):
     log('Loading vocabs...')
     vocabs = utils.Vocab.load(params['base_dir'])
 
-    model, _, encoder, _, _, _ = build(params, vocabs)
+    model, _, encoder, _, _, _, _ = build(params, vocabs)
 
     log('Loading CoNLL-U file...')
     conllu_file = conll.load_conllu(params['conllu_file'])
