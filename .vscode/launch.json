@@ -43,8 +43,9 @@
                 "--epochs", "1000",
                 "--checkpoint_rolling", "True",
                 "--batch_per_epoch", "2",
-                "--model_inputs", "char", "none",
+                "--model_inputs", "char", "word",
                 "--model_core_type", "transformer",
+                "--model_core_transformer_layers_direction", "V",
                 "--model_word_dense_size", "None",
             ]
         },

@@ -33,6 +33,7 @@ class Encoder(keras.Model):
         hidden_size: int,
         max_length: int,
         layers: int,
+        layers_direction: str,
         attention_key_dense_size: int,
         attention_value_dense_size: int,
         attention_heads: int,
@@ -51,6 +52,8 @@ class Encoder(keras.Model):
         self.use_timing_signal = use_timing_signal
         self.max_length = max_length
 
+        self.enc_direction = layers_direction
+        self.enc_concat = keras.layers.Concatenate(axis=-1)
         self.enc_all = [
             EncoderLayer(
                 hidden_size,
@@ -75,8 +78,12 @@ class Encoder(keras.Model):
             self.timing_signal = _gen_timing_signal(self.max_length, x.shape[-1].value)
             x = x + self.timing_signal[:inputs.shape[1].value, :]
 
-        for enc in self.enc_all:
-            x = enc(x)
+        if self.enc_direction == 'V':
+            x = [enc(x) for enc in self.enc_all]
+            x = self.enc_concat(x) if len(x) > 1 else x[0]
+        else:
+            for enc in self.enc_all:
+                x = enc(x)
 
         x = self.norm(x)
 

@@ -70,6 +70,7 @@ def parse_args():
         parser.add_argument('--model_core_transformer_use_timing_signal', type=utils.str2bool, default=True, help='Flag enabling timing signal component.')
         parser.add_argument('--model_core_transformer_hidden_size', type=int, default=32, help='Sublayer hidden size in transformer core model.')
         parser.add_argument('--model_core_transformer_sent_max_length', type=int, default=75, help='Assumed maximum lenght of sentence used to generate positional signal in transformer core model.')
+        parser.add_argument('--model_core_transformer_layers_direction', type=str, default=['H'], choices=['H', 'V'], help='Direction of stacking encoder layers in core transformer model (horizontal / vertical).')
         parser.add_argument('--model_core_transformer_layers', type=int, default=3, help='Number of encoder layers in core transformer model.')
         parser.add_argument('--model_core_transformer_attention_heads', type=int, default=10, help='Number of heads of multi-head attention layer in core transformer model.')
         parser.add_argument('--model_core_transformer_attention_key_dense_size', type=int, default=20, help='Size of attention key sublayers\' dense layer in core transformer model.')

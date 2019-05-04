@@ -24,6 +24,7 @@ def preprocess(args):
         pm = [args.model_core_type]
 
         if args.model_core_type == 'transformer':
+            pm.append('dir' + str(args.model_core_transformer_layers_direction))
             pm.append(str(args.model_core_transformer_layers))
             pm.append(str(args.model_core_transformer_hidden_size))
             pm.append('ah' + str(args.model_core_transformer_attention_heads))
