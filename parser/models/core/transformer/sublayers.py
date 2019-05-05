@@ -16,13 +16,13 @@ class MultiHeadAttention(keras.Model):
         super(MultiHeadAttention, self).__init__(*args, **kwargs)
 
         self.heads_count = heads_count
-        self.query_scale = (key_dense_size // heads_count)**-0.5
 
         self.query_dense = keras.layers.Dense(key_dense_size)
         self.key_dense = keras.layers.Dense(key_dense_size)
         self.value_dense = keras.layers.Dense(value_dense_size)
         self.output_dense = keras.layers.Dense(output_dense_size)
 
+        self.logit_scale = (key_dense_size // heads_count)**-0.5
         self.softmax = keras.layers.Softmax()
 
         self.dropout = keras.layers.Dropout(dropout)
@@ -37,11 +37,10 @@ class MultiHeadAttention(keras.Model):
         key = self._split_heads(key)
         value = self._split_heads(value)
 
-        query *= self.query_scale
+        logit = tf.matmul(query, key, transpose_b=True)
+        logit *= self.logit_scale
 
         # TODO add bias mask
-
-        logit = tf.matmul(query, key, transpose_b=True)
 
         weight = self.softmax(logit)
         weight = self.dropout(weight)
