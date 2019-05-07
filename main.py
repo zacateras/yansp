@@ -119,6 +119,7 @@ def parse_args():
         parser.set_defaults(mode='evaluate')
         parser.add_argument('--model_dir', type=str, required=True, help='Root dir for model configuration, vocabs and checkpoints.')
         parser.add_argument('--conllu_file', type=str, help='Input CoNLL-U file.')
+        parser.add_argument('--summary_file', type=str, help='Evaluation summary file.')
 
     add_train_arguments(subparsers.add_parser('train'))
     add_retrain_arguments(subparsers.add_parser('retrain'))
@@ -239,7 +240,7 @@ def train(params):
 
         if validation:
             log('Validation {}/{}.'.format(epoch_i + 1, params['epochs']))
-            loss_total_dev = validate(step, encoder, params, sents_dev, '{}/validation/{}_'.format(params['base_dir'], epoch_i))
+            loss_total_dev, _ = validate(step, encoder, params, sents_dev, '{}/validation/{}_'.format(params['base_dir'], epoch_i))
 
         # save checkpoint
         if 'loss_total_min_dev' not in locals():
@@ -329,7 +330,7 @@ def validate(step, encoder, params, sents, out_conllu_prefix):
 
     log(summaries)
 
-    return loss_total
+    return loss_total, summaries
 
 def evaluate(params):
     log('Loading vocabs...')
@@ -343,7 +344,19 @@ def evaluate(params):
 
     log('Evaluating...')
     step = Step(model, parser.losses.y(params), params['loss_weights'])
-    validate(step, encoder, params, sents, '{}/'.format(params['base_dir']))
+    _, summaries = validate(step, encoder, params, sents, '{}/'.format(params['base_dir']))
+
+    # directory name treated as signature
+    if 'summary_file' in params:
+        signature = os.path.split(params['base_dir'])
+        signature = signature[len(signature) - 1]
+
+        summaries['signature'] = signature
+        summaries['conllu_file'] = params['conllu_file']
+
+        with open(params['summary_file'], 'a+') as f:
+            f.write(str(summaries) + '\n')
+
 
 def main():
     tf.enable_eager_execution()
