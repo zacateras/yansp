@@ -334,7 +334,7 @@ def validate(step, encoder, params, sents, out_conllu_prefix):
 
 def evaluate(params):
     # for backward compatibility TODO: remove
-    if params['base_dir'] is None:
+    if 'base_dir' not in params:
         params['base_dir'] = params['model_dir']
 
     log('Loading vocabs...')
