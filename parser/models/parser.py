@@ -77,7 +77,7 @@ class ParserModel(keras.Model):
                 hidden_size=params['model_core_transformer_hidden_size'],
                 max_length=params['model_core_transformer_sent_max_length'],
                 layers=params['model_core_transformer_layers'],
-                layers_direction=params['model_core_transformer_layers_direction'],
+                layers_direction=(params['model_core_transformer_layers_direction'] if 'model_core_transformer_layers_direction' in params else 'H'),
                 attention_key_dense_size=params['model_core_transformer_attention_key_dense_size'],
                 attention_value_dense_size=params['model_core_transformer_attention_value_dense_size'],
                 attention_heads=params['model_core_transformer_attention_heads'],
