@@ -333,6 +333,10 @@ def validate(step, encoder, params, sents, out_conllu_prefix):
     return loss_total, summaries
 
 def evaluate(params):
+    # for backward compatibility TODO: remove
+    if params['base_dir'] is None:
+        params['base_dir'] = params['model_dir']
+
     log('Loading vocabs...')
     vocabs = utils.Vocab.load(params['base_dir'])
 
