@@ -1,9 +1,11 @@
 import argparse
 import os.path
 import re
+import datetime
 
 import tensorflow as tf
 import numpy as np
+import pandas as pd
 
 import conll
 import utils
@@ -118,7 +120,7 @@ def parse_args():
     def add_evaluate_arguments(parser):
         parser.set_defaults(mode='evaluate')
         parser.add_argument('--model_dir', type=str, required=True, help='Root dir for model configuration, vocabs and checkpoints.')
-        parser.add_argument('--conllu_file', type=str, help='Input CoNLL-U file.')
+        parser.add_argument('--conllu_file', nargs='+', help='Input CoNLL-U file(s).')
         parser.add_argument('--summary_file', type=str, help='Evaluation summary file.')
 
     add_train_arguments(subparsers.add_parser('train'))
@@ -342,25 +344,38 @@ def evaluate(params):
 
     model, _, encoder, _, _, _, _ = build(params, vocabs)
 
-    log('Loading CoNLL-U file...')
-    conllu_file = conll.load_conllu(params['conllu_file'])
-    sents = [sent.with_root() for sent in conllu_file.sents]
+    for conllu_file_path in params['conllu_file']:
+        log('Loading CoNLL-U file {}...'.format(conllu_file_path))
+        conllu_file = conll.load_conllu(conllu_file_path)
+        sents = [sent.with_root() for sent in conllu_file.sents]
 
-    log('Evaluating...')
-    step = Step(model, parser.losses.y(params), params['loss_weights'])
-    _, summaries = validate(step, encoder, params, sents, '{}/'.format(params['base_dir']))
+        log('Evaluating {}...'.format(conllu_file))
+        step = Step(model, parser.losses.y(params), params['loss_weights'])
+        _, summaries = validate(step, encoder, params, sents, '{}/'.format(params['base_dir']))
 
-    # directory name treated as signature
-    if 'summary_file' in params:
-        signature = os.path.split(params['base_dir'])
-        signature = signature[len(signature) - 1]
+        # directory name treated as signature
+        if 'summary_file' in params:
+            ud_file = os.path.split(conllu_file_path)
+            ud_file = ud_file[len(ud_file) - 1]
 
-        summaries['signature'] = signature
-        summaries['conllu_file'] = params['conllu_file']
+            log('Writing summary for {} to {}...'.format(ud_file, params['summary_file']))
+            signature = os.path.split(params['base_dir'])
+            signature = signature[len(signature) - 1]
 
-        with open(params['summary_file'], 'a+') as f:
-            f.write(str(summaries) + '\n')
+            summaries['signature'] = signature
+            summaries['ud_file'] = ud_file
+            summaries['ud_version'] = '2.3'
+            summaries['timestamp'] = f"{datetime.datetime.now():%Y-%m-%d %H:%M:%S}"
 
+            record = pd.io.json.json_normalize(summaries)
+
+            try:
+                df = pd.read_csv(params['summary_file'])
+
+                df = df.append(record)
+                df.to_csv(params['summary_file'], index=False)
+            except FileNotFoundError:
+                record.to_csv(params['summary_file'], index=False)
 
 def main():
     tf.enable_eager_execution()
