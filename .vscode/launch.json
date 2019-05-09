@@ -12,8 +12,8 @@
             "console": "integratedTerminal",
             "pythonPath": "${workspaceFolder}/.venv3.7/bin/python",
             "args": [
-                "--mode", "train",
-                "--lang", "pl",
+                "train",
+                "--signature_prefix", "pl_lfg",
                 "--wordvec_file", "tmp/ft/cc.pl.300.vec.500.top",
                 "--train_file", "tmp/ud-treebanks-v2.3/UD_Polish-LFG/pl_lfg-ud-train.conllu",
                 "--dev_file", "tmp/ud-treebanks-v2.3/UD_Polish-LFG/pl_lfg-ud-dev.conllu",
@@ -34,6 +34,7 @@
             "pythonPath": "${workspaceFolder}/.venv3.7/bin/python",
             "args": [
                 "train",
+                "--signature_prefix", "pl_lfg",
                 "--wordvec_file", "tmp/ft/cc.pl.300.vec.500.top",
                 "--train_file", "tmp/ud-treebanks-v2.3/UD_Polish-LFG/pl_lfg-ud-train.conllu",
                 "--dev_file", "tmp/ud-treebanks-v2.3/UD_Polish-LFG/pl_lfg-ud-dev.conllu",
@@ -58,7 +59,7 @@
             "pythonPath": "${workspaceFolder}/.venv3.7/bin/python",
             "args": [
                 "retrain",
-                "--model_dir", "out/transformer.3.32.ah10.ak20.av20-80161331",
+                "--model_dir", "out/pl_lfg.transformer.3.32.ah10.ak20.av20-80161331",
                 "--train_file", "tmp/ud-treebanks-v2.3/UD_Polish-LFG/pl_lfg-ud-train.conllu",
                 "--dev_file", "tmp/ud-treebanks-v2.3/UD_Polish-LFG/pl_lfg-ud-dev.conllu",
                 "--test_file", "tmp/ud-treebanks-v2.3/UD_Polish-LFG/pl_lfg-ud-test.conllu",
@@ -106,6 +107,20 @@
                 "--model_word_max_length", "60",
                 "--model_core_type", "transformer",
                 "--model_core_transformer_sent_max_length", "200",
+            ]
+        },
+        {
+            "name": "Prepare summary.",
+            "type": "python",
+            "request": "launch",
+            "program": "${workspaceFolder}/summary.py",
+            "console": "integratedTerminal",
+            "pythonPath": "${workspaceFolder}/.venv3.7/bin/python",
+            "args": [
+                "--treebanks_root_dir", "tmp/ud-treebanks-v2.3",
+                "--models_root_dir", "out/",
+                "--scores_file", "out/scores.csv",
+                "--confs_file", "out/confs.csv"
             ]
         }
     ]
