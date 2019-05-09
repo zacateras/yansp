@@ -121,7 +121,7 @@ def parse_args():
         parser.set_defaults(mode='evaluate')
         parser.add_argument('--model_dir', type=str, required=True, help='Root dir for model configuration, vocabs and checkpoints.')
         parser.add_argument('--conllu_file', nargs='+', help='Input CoNLL-U file(s).')
-        parser.add_argument('--summary_file', type=str, help='Evaluation summary file.')
+        parser.add_argument('--scores_file', type=str, help='Evaluation scores file.')
 
     add_train_arguments(subparsers.add_parser('train'))
     add_retrain_arguments(subparsers.add_parser('retrain'))
@@ -354,11 +354,11 @@ def evaluate(params):
         _, summaries = validate(step, encoder, params, sents, '{}/'.format(params['base_dir']))
 
         # directory name treated as signature
-        if 'summary_file' in params:
+        if 'scores_file' in params:
             ud_file = os.path.split(conllu_file_path)
             ud_file = ud_file[len(ud_file) - 1]
 
-            log('Writing summary for {} to {}...'.format(ud_file, params['summary_file']))
+            log('Writing summary for {} to {}...'.format(ud_file, params['scores_file']))
             signature = os.path.split(params['base_dir'])
             signature = signature[len(signature) - 1]
 
@@ -370,12 +370,12 @@ def evaluate(params):
             record = pd.io.json.json_normalize(summaries)
 
             try:
-                df = pd.read_csv(params['summary_file'])
+                df = pd.read_csv(params['scores_file'])
 
                 df = df.append(record)
-                df.to_csv(params['summary_file'], index=False)
+                df.to_csv(params['scores_file'], index=False)
             except FileNotFoundError:
-                record.to_csv(params['summary_file'], index=False)
+                record.to_csv(params['scores_file'], index=False)
 
 def main():
     tf.enable_eager_execution()
