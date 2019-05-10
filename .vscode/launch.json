@@ -78,7 +78,7 @@
             "pythonPath": "${workspaceFolder}/.venv3.7/bin/python",
             "args": [
                 "evaluate",
-                "--model_dir", "out/transformer.dirV.3.32.ah10.ak20.av20-23d8af05",
+                "--model_dir", "out/pl_lfg.transformer.dirV.3.32.ah10.ak20.av20-23d8af05",
                 "--conllu_file", "tmp/ud-treebanks-v2.3/UD_Polish-LFG/pl_lfg-ud-dev.conllu", "tmp/ud-treebanks-v2.3/UD_Polish-LFG/pl_lfg-ud-test.conllu",
                 "--scores_file", "logs/summary.csv"
             ]

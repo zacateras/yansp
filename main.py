@@ -349,18 +349,38 @@ def evaluate(params):
         conllu_file = conll.load_conllu(conllu_file_path)
         sents = [sent.with_root() for sent in conllu_file.sents]
 
+        signature = os.path.split(params['base_dir'])
+        signature = signature[len(signature) - 1]
+
+        ud_file = os.path.split(conllu_file_path)
+        ud_file = ud_file[len(ud_file) - 1]
+
+        if 'scores_file' in params:
+            try:
+                scores = pd.read_csv(params['scores_file'])
+                scores = scores[scores['signature'] == signature]
+                scores = scores[scores['ud_file'] == ud_file]
+
+                if scores['signature'].any():
+                    log('Skipping evaluation for {}, {}, because results already exist.'.format(ud_file, signature))
+                    continue
+            except FileNotFoundError:
+                pass
+
         log('Evaluating {}...'.format(conllu_file))
-        step = Step(model, parser.losses.y(params), params['loss_weights'])
-        _, summaries = validate(step, encoder, params, sents, '{}/'.format(params['base_dir']))
+        try:
+            step = Step(model, parser.losses.y(params), params['loss_weights'])
+            _, summaries = validate(step, encoder, params, sents, '{}/'.format(params['base_dir']))
+            summaries['success'] = True
+            log('Evaluated {} successfully.'.format(conllu_file))
+        except BaseException as e:
+            summaries = dict()
+            summaries['success'] = False
+            log('Evaluation of {} failed.'.format(conllu_file))
 
         # directory name treated as signature
         if 'scores_file' in params:
-            ud_file = os.path.split(conllu_file_path)
-            ud_file = ud_file[len(ud_file) - 1]
-
             log('Writing summary for {} to {}...'.format(ud_file, params['scores_file']))
-            signature = os.path.split(params['base_dir'])
-            signature = signature[len(signature) - 1]
 
             summaries['signature'] = signature
             summaries['ud_file'] = ud_file
@@ -370,10 +390,10 @@ def evaluate(params):
             record = pd.io.json.json_normalize(summaries)
 
             try:
-                df = pd.read_csv(params['scores_file'])
+                scores = pd.read_csv(params['scores_file'])
 
-                df = df.append(record)
-                df.to_csv(params['scores_file'], index=False)
+                scores = scores.append(record)
+                scores.to_csv(params['scores_file'], index=False)
             except FileNotFoundError:
                 record.to_csv(params['scores_file'], index=False)
 
