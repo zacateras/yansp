@@ -339,16 +339,7 @@ def evaluate(params):
     if 'base_dir' not in params:
         params['base_dir'] = params['model_dir']
 
-    log('Loading vocabs...')
-    vocabs = utils.Vocab.load(params['base_dir'])
-
-    model, _, encoder, _, _, _, _ = build(params, vocabs)
-
     for conllu_file_path in params['conllu_file']:
-        log('Loading CoNLL-U file {}...'.format(conllu_file_path))
-        conllu_file = conll.load_conllu(conllu_file_path)
-        sents = [sent.with_root() for sent in conllu_file.sents]
-
         signature = os.path.split(params['base_dir'])
         signature = signature[len(signature) - 1]
 
@@ -366,6 +357,17 @@ def evaluate(params):
                     continue
             except FileNotFoundError:
                 pass
+
+        # build model just once
+        if 'vocabs' not in locals():
+            log('Loading vocabs...')
+            vocabs = utils.Vocab.load(params['base_dir'])
+
+            model, _, encoder, _, _, _, _ = build(params, vocabs)
+
+        log('Loading CoNLL-U file {}...'.format(conllu_file_path))
+        conllu_file = conll.load_conllu(conllu_file_path)
+        sents = [sent.with_root() for sent in conllu_file.sents]
 
         log('Evaluating {}...'.format(conllu_file))
         try:
