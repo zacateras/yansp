@@ -30,7 +30,7 @@ if __name__ == '__main__':
     args = parse_args()
 
     if os.path.exists(args.scores_file):
-        log('Loading scores from {}...'.format(argparse.scores_file))
+        log('Loading scores from {}...'.format(arg.scores_file))
         scores_df = pd.read_csv(args.scores_file)
 
     if os.path.exists(args.confs_file):

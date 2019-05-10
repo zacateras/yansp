@@ -371,8 +371,12 @@ def evaluate(params):
 
         log('Evaluating {}...'.format(conllu_file))
         try:
+            t_start = datetime.datetime.now()
             step = Step(model, parser.losses.y(params), params['loss_weights'])
             _, summaries = validate(step, encoder, params, sents, '{}/'.format(params['base_dir']))
+            t_end = datetime.datetime.now()
+
+            summaries['duration'] = str(t_end - t_start)
             summaries['success'] = True
             log('Evaluated {} successfully.'.format(conllu_file))
         except BaseException as e:
