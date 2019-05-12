@@ -15,12 +15,12 @@ class FeatsModel(keras.Model):
             activation=keras.activations.tanh
         )
 
+        self.dropout = keras.layers.Dropout(dropout)
+
         self.dense = keras.layers.Dense(
             units=feats_count,
-            activation=keras.activations.tanh
+            activation=keras.activations.sigmoid
         )
-
-        self.dropout = keras.layers.Dropout(dropout)
 
     def call(self, inputs):
         x = self.dense_hidden(inputs)
